@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "generatedAt": "2025-06-16T22:37:17.700Z",
+    "tasksAnalyzed": 18,
+    "thresholdScore": 5,
+    "projectName": "Your Project Name",
+    "usedResearch": true
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 1,
+      "taskTitle": "Project Setup and Configuration",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the project setup into: initializing the project, installing dependencies, configuring folder structure, setting up TypeScript, and implementing the dark theme.",
+      "reasoning": "Requires multiple configuration steps, dependency management, and adherence to best practices for folder structure and theming."
+    },
+    {
+      "taskId": 2,
+      "taskTitle": "Photo Library Permission and Access",
+      "complexityScore": 6,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Divide into: configuring iOS permissions, building permissions service, creating permission request UI, implementing photo access, and developing metadata utility functions.",
+      "reasoning": "Involves platform-specific configuration, permission handling, UI design, and utility development."
+    },
+    {
+      "taskId": 3,
+      "taskTitle": "Photo Organization System",
+      "complexityScore": 8,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Split into: data structure design, chronological ordering, source-based categorization, cross-categorization, photo counting, and Redux integration.",
+      "reasoning": "Requires complex data organization, algorithm design, and state management integration."
+    },
+    {
+      "taskId": 4,
+      "taskTitle": "Category Selection UI",
+      "complexityScore": 6,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break into: card layout design, thumbnail previews, photo count badges, recently used logic, and transition animations.",
+      "reasoning": "Involves UI design, dynamic content, and smooth transitions."
+    },
+    {
+      "taskId": 5,
+      "taskTitle": "Core Swipe Mechanics",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Divide into: swipe gesture implementation, card tilt/slide animations, swipe detection, haptic feedback, and visual indicators.",
+      "reasoning": "Requires advanced gesture handling, animation, and user feedback."
+    },
+    {
+      "taskId": 6,
+      "taskTitle": "Photo Display Component",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Split into: full-screen viewer, metadata overlay, zoom functionality, tap gesture, image loading optimization, and fade-in animation.",
+      "reasoning": "Involves complex UI, gesture handling, and performance optimization."
+    },
+    {
+      "taskId": 7,
+      "taskTitle": "Main Swipe Interface Integration",
+      "complexityScore": 8,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Break into: swipe-photo integration, photo stack preloading, main layout, visual cues, swipe decision tracking, and memory optimization.",
+      "reasoning": "Requires integration of multiple components, performance optimization, and state management."
+    },
+    {
+      "taskId": 8,
+      "taskTitle": "Progress Tracking UI",
+      "complexityScore": 5,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide into: progress bar, photo counter, category completion indicators, and real-time updates.",
+      "reasoning": "Involves UI design and real-time data updates."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "Undo Functionality",
+      "complexityScore": 6,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Split into: action stack, undo button UI, animation, undo logic, and visual feedback.",
+      "reasoning": "Requires state management, UI design, and user feedback."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "Session Management",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break into: session persistence, pause/resume, category memory, progress saving, and crash recovery.",
+      "reasoning": "Involves persistent storage, state management, and error handling."
+    },
+    {
+      "taskId": 11,
+      "taskTitle": "Deletion Review Screen",
+      "complexityScore": 6,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Divide into: grid view, removal logic, confirmation dialog, visual indicators, and transitions.",
+      "reasoning": "Requires UI design, user interaction, and state management."
+    },
+    {
+      "taskId": 12,
+      "taskTitle": "Deletion Process Implementation",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Split into: iOS integration, warning display, Photos app link, error handling, and success feedback.",
+      "reasoning": "Involves platform integration, error handling, and user feedback."
+    },
+    {
+      "taskId": 13,
+      "taskTitle": "Onboarding Experience",
+      "complexityScore": 6,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break into: onboarding screens, interactive tutorial, gesture indicators, success feedback, and skip option.",
+      "reasoning": "Requires UI design, user education, and state management."
+    },
+    {
+      "taskId": 14,
+      "taskTitle": "Freemium Model Implementation",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide into: free tier tracking, daily reset, premium flow, upgrade screen, subscription storage, and UI indicators.",
+      "reasoning": "Involves business logic, in-app purchase integration, and UI design."
+    },
+    {
+      "taskId": 15,
+      "taskTitle": "Settings Screen",
+      "complexityScore": 5,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Split into: settings UI, premium CTA, usage stats, user preferences, and about/help section.",
+      "reasoning": "Requires UI design, data display, and persistent storage."
+    },
+    {
+      "taskId": 16,
+      "taskTitle": "Error Handling and Edge Cases",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Break into: permission error handling, empty category messages, session recovery, storage warnings, network error handling, and error logging.",
+      "reasoning": "Requires comprehensive error handling, user messaging, and logging."
+    },
+    {
+      "taskId": 17,
+      "taskTitle": "Performance Optimization",
+      "complexityScore": 8,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide into: photo preloading, memory cleanup, image caching, lazy loading, animation optimization, and memory monitoring.",
+      "reasoning": "Requires advanced performance tuning, memory management, and monitoring."
+    },
+    {
+      "taskId": 18,
+      "taskTitle": "Final Testing and Refinement",
+      "complexityScore": 9,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Split into: unit testing, integration testing, user testing, performance testing, device compatibility, UI/UX refinement, and App Store preparation.",
+      "reasoning": "Requires comprehensive testing, bug fixing, and release preparation."
+    }
+  ]
+}

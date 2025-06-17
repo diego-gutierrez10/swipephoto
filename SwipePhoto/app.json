@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "SwipePhoto",
+    "slug": "swipephoto",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you organize them by swiping into categories."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.diegogutierrez.swipephoto",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "SwipePhoto helps you organize your photos locally on your device by swiping them into custom categories. Your photos stay completely private and are never uploaded or shared.",
+        "NSCameraUsageDescription": "SwipePhoto lets you take new photos to organize alongside your existing ones. All processing happens locally on your device.",
+        "PHPhotoLibraryPreventAutomaticLimitedAccessAlert": true,
+        "NSPhotoLibraryAddUsageDescription": "SwipePhoto can save organized photos back to your library if you choose. This is entirely optional and local to your device."
+      }
+    },
+    "android": {
+      "package": "com.diegogutierrez.swipephoto",
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE",
+        "CAMERA"
+      ],
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./src/assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    }
+  }
+}
