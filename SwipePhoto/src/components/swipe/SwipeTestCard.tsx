@@ -7,8 +7,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SwipeCard } from './SwipeCard';
-import { SwipeDirection } from './SwipeGestureHandler';
+import { SwipeGestureHandler, SwipeDirection } from './SwipeGestureHandler';
 
 export interface SwipeTestCardProps {
   imageUri?: string;
@@ -62,7 +61,7 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
           Swipe Gesture Test
         </Text>
         
-        <SwipeCard
+        <SwipeGestureHandler
           onSwipeComplete={handleSwipeComplete}
           onSwipeProgress={handleSwipeProgress}
           style={styles.card}
@@ -133,7 +132,7 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
               }
             ]} />
           </View>
-        </SwipeCard>
+        </SwipeGestureHandler>
 
         {/* Debug Information */}
         <View style={styles.debugContainer}>

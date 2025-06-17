@@ -10,9 +10,12 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   withSpring,
+  withTiming,
   useAnimatedStyle,
   runOnJS,
   useAnimatedReaction,
+  Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import { ViewStyle } from 'react-native';
 
@@ -30,15 +33,6 @@ export interface SwipeGestureHandlerProps {
   thresholds?: Partial<SwipeThreshold>;
   style?: ViewStyle;
   disabled?: boolean;
-  animationConfig?: {
-    duration: number;
-    damping: number;
-    stiffness: number;
-  };
-  createAnimatedStyles?: (
-    translateX: Animated.SharedValue<number>,
-    isGestureActive: Animated.SharedValue<boolean>
-  ) => any;
 }
 
 // Default thresholds for swipe detection
@@ -48,12 +42,27 @@ const DEFAULT_THRESHOLDS: SwipeThreshold = {
 };
 
 // Animation configuration for spring animations
-const DEFAULT_SPRING_CONFIG = {
+const SPRING_CONFIG = {
   damping: 15,
   stiffness: 100,
-  overshootClamping: true,
+  mass: 1,
+  overshootClamping: false, // Allow natural overshoot for better feel
   restSpeedThreshold: 0.1,
   restDisplacementThreshold: 0.1,
+};
+
+// Configuration for completed swipe animations (300ms duration using withTiming)
+const COMPLETED_SWIPE_TIMING_CONFIG = {
+  duration: 300, // Exact 300ms as specified in requirements
+  easing: Easing.out(Easing.cubic), // Natural easing for swipe completion
+};
+
+// Configuration for snap-back animations (using withSpring)
+const SNAPBACK_CONFIG = {
+  damping: 20,
+  stiffness: 200,
+  mass: 1,
+  overshootClamping: false,
 };
 
 export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
@@ -63,20 +72,9 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   thresholds = {},
   style,
   disabled = false,
-  animationConfig,
-  createAnimatedStyles,
 }) => {
   // Merge thresholds with defaults
   const finalThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
-  
-  // Merge animation config with defaults
-  const finalAnimationConfig = {
-    ...DEFAULT_SPRING_CONFIG,
-    ...(animationConfig && {
-      damping: animationConfig.damping,
-      stiffness: animationConfig.stiffness,
-    }),
-  };
   
   // Shared values for gesture tracking
   const translateX = useSharedValue(0);
@@ -127,15 +125,12 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
       const direction: SwipeDirection = translateX.value > 0 ? 'right' : 'left';
       
       if (shouldSwipe) {
-        // Complete swipe with spring animation
+        // Complete swipe with timing animation (300ms duration)
         const targetPosition = direction === 'right' ? 500 : -500;
         
-        translateX.value = withSpring(
+        translateX.value = withTiming(
           targetPosition,
-          {
-            ...finalAnimationConfig,
-            velocity: event.velocityX,
-          },
+          COMPLETED_SWIPE_TIMING_CONFIG,
           (finished) => {
             'worklet';
             if (finished) {
@@ -146,11 +141,10 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
           }
         );
       } else {
-        // Return to center with spring animation
+        // Return to center with snap-back animation
         translateX.value = withSpring(0, {
-          ...finalAnimationConfig,
+          ...SNAPBACK_CONFIG,
           velocity: event.velocityX,
-          stiffness: 200, // Higher stiffness for snap-back
         });
       }
       
@@ -162,26 +156,42 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
     });
 
   // Optimized animated styles using worklets
-  const animatedStyles = createAnimatedStyles 
-    ? createAnimatedStyles(translateX, isGestureActive)
-    : useAnimatedStyle(() => {
-        'worklet';
-        
-        // Calculate rotation for natural card feel (max 20 degrees)
-        const rotation = (translateX.value / 20);
-        const clampedRotation = Math.max(-20, Math.min(20, rotation));
-        
-        // Add subtle scale effect during active gesture
-        const scale = isGestureActive.value ? 0.98 : 1;
-        
-        return {
-          transform: [
-            { translateX: translateX.value },
-            { rotate: `${clampedRotation}deg` },
-            { scale: withSpring(scale, { damping: 20, stiffness: 300 }) },
-          ],
-        };
-      });
+  const animatedStyles = useAnimatedStyle(() => {
+    'worklet';
+    
+    // Calculate rotation for natural card feel (max ±20 degrees)
+    // Use interpolation for smoother rotation mapping
+    const rotation = interpolate(
+      translateX.value,
+      [-200, 0, 200],
+      [-20, 0, 20]
+    );
+    
+    // Enhanced scale effect: lift up during gesture (1.02-1.05 range)
+    const gestureProgress = Math.abs(translateX.value) / 100;
+    const scaleFromGesture = interpolate(
+      gestureProgress,
+      [0, 1],
+      [1, 1.03] // Subtle lift effect
+    );
+    const scale = isGestureActive.value ? scaleFromGesture : 1;
+    
+    // Add subtle opacity effect for cards being swiped away
+    const opacity = interpolate(
+      Math.abs(translateX.value),
+      [0, 150, 300],
+      [1, 0.8, 0.5]
+    );
+    
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { rotate: `${rotation}deg` },
+        { scale: withSpring(scale, { damping: 20, stiffness: 300, mass: 1 }) },
+      ],
+      opacity: opacity,
+    };
+  });
 
   return (
     <GestureDetector gesture={panGesture}>
@@ -247,12 +257,9 @@ export const useSwipeGesture = (
       
       if (shouldSwipe) {
         const targetPosition = direction === 'right' ? 500 : -500;
-        translateX.value = withSpring(
+        translateX.value = withTiming(
           targetPosition,
-          {
-            ...DEFAULT_SPRING_CONFIG,
-            velocity: event.velocityX,
-          },
+          COMPLETED_SWIPE_TIMING_CONFIG,
           (finished) => {
             'worklet';
             if (finished) {
@@ -263,9 +270,8 @@ export const useSwipeGesture = (
         );
       } else {
         translateX.value = withSpring(0, {
-          ...DEFAULT_SPRING_CONFIG,
+          ...SNAPBACK_CONFIG,
           velocity: event.velocityX,
-          stiffness: 200,
         });
       }
       
@@ -275,16 +281,36 @@ export const useSwipeGesture = (
   const animatedStyles = useAnimatedStyle(() => {
     'worklet';
     
-    const rotation = (translateX.value / 20);
-    const clampedRotation = Math.max(-20, Math.min(20, rotation));
-    const scale = isGestureActive.value ? 0.98 : 1;
+    // Calculate rotation using interpolation for smoother feel
+    const rotation = interpolate(
+      translateX.value,
+      [-200, 0, 200],
+      [-20, 0, 20]
+    );
+    
+    // Enhanced scale effect: lift up during gesture
+    const gestureProgress = Math.abs(translateX.value) / 100;
+    const scaleFromGesture = interpolate(
+      gestureProgress,
+      [0, 1],
+      [1, 1.03]
+    );
+    const scale = isGestureActive.value ? scaleFromGesture : 1;
+    
+    // Opacity effect for cards being swiped away
+    const opacity = interpolate(
+      Math.abs(translateX.value),
+      [0, 150, 300],
+      [1, 0.8, 0.5]
+    );
     
     return {
       transform: [
         { translateX: translateX.value },
-        { rotate: `${clampedRotation}deg` },
-        { scale: withSpring(scale, { damping: 20, stiffness: 300 }) },
+        { rotate: `${rotation}deg` },
+        { scale: withSpring(scale, { damping: 20, stiffness: 300, mass: 1 }) },
       ],
+      opacity: opacity,
     };
   });
 
