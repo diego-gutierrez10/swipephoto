@@ -30,6 +30,15 @@ export interface SwipeGestureHandlerProps {
   thresholds?: Partial<SwipeThreshold>;
   style?: ViewStyle;
   disabled?: boolean;
+  animationConfig?: {
+    duration: number;
+    damping: number;
+    stiffness: number;
+  };
+  createAnimatedStyles?: (
+    translateX: Animated.SharedValue<number>,
+    isGestureActive: Animated.SharedValue<boolean>
+  ) => any;
 }
 
 // Default thresholds for swipe detection
@@ -39,7 +48,7 @@ const DEFAULT_THRESHOLDS: SwipeThreshold = {
 };
 
 // Animation configuration for spring animations
-const SPRING_CONFIG = {
+const DEFAULT_SPRING_CONFIG = {
   damping: 15,
   stiffness: 100,
   overshootClamping: true,
@@ -54,9 +63,20 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   thresholds = {},
   style,
   disabled = false,
+  animationConfig,
+  createAnimatedStyles,
 }) => {
   // Merge thresholds with defaults
   const finalThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
+  
+  // Merge animation config with defaults
+  const finalAnimationConfig = {
+    ...DEFAULT_SPRING_CONFIG,
+    ...(animationConfig && {
+      damping: animationConfig.damping,
+      stiffness: animationConfig.stiffness,
+    }),
+  };
   
   // Shared values for gesture tracking
   const translateX = useSharedValue(0);
@@ -113,7 +133,7 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
         translateX.value = withSpring(
           targetPosition,
           {
-            ...SPRING_CONFIG,
+            ...finalAnimationConfig,
             velocity: event.velocityX,
           },
           (finished) => {
@@ -128,7 +148,7 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
       } else {
         // Return to center with spring animation
         translateX.value = withSpring(0, {
-          ...SPRING_CONFIG,
+          ...finalAnimationConfig,
           velocity: event.velocityX,
           stiffness: 200, // Higher stiffness for snap-back
         });
@@ -142,24 +162,26 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
     });
 
   // Optimized animated styles using worklets
-  const animatedStyles = useAnimatedStyle(() => {
-    'worklet';
-    
-    // Calculate rotation for natural card feel (max 20 degrees)
-    const rotation = (translateX.value / 20);
-    const clampedRotation = Math.max(-20, Math.min(20, rotation));
-    
-    // Add subtle scale effect during active gesture
-    const scale = isGestureActive.value ? 0.98 : 1;
-    
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { rotate: `${clampedRotation}deg` },
-        { scale: withSpring(scale, { damping: 20, stiffness: 300 }) },
-      ],
-    };
-  });
+  const animatedStyles = createAnimatedStyles 
+    ? createAnimatedStyles(translateX, isGestureActive)
+    : useAnimatedStyle(() => {
+        'worklet';
+        
+        // Calculate rotation for natural card feel (max 20 degrees)
+        const rotation = (translateX.value / 20);
+        const clampedRotation = Math.max(-20, Math.min(20, rotation));
+        
+        // Add subtle scale effect during active gesture
+        const scale = isGestureActive.value ? 0.98 : 1;
+        
+        return {
+          transform: [
+            { translateX: translateX.value },
+            { rotate: `${clampedRotation}deg` },
+            { scale: withSpring(scale, { damping: 20, stiffness: 300 }) },
+          ],
+        };
+      });
 
   return (
     <GestureDetector gesture={panGesture}>
@@ -228,7 +250,7 @@ export const useSwipeGesture = (
         translateX.value = withSpring(
           targetPosition,
           {
-            ...SPRING_CONFIG,
+            ...DEFAULT_SPRING_CONFIG,
             velocity: event.velocityX,
           },
           (finished) => {
@@ -241,7 +263,7 @@ export const useSwipeGesture = (
         );
       } else {
         translateX.value = withSpring(0, {
-          ...SPRING_CONFIG,
+          ...DEFAULT_SPRING_CONFIG,
           velocity: event.velocityX,
           stiffness: 200,
         });
