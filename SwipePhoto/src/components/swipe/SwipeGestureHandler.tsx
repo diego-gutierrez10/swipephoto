@@ -5,7 +5,7 @@
  * and Gesture Handler for detecting and tracking horizontal swipe movements.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -18,6 +18,8 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ViewStyle } from 'react-native';
+import { HapticFeedbackService, HapticFeedbackType } from '../../services/HapticFeedbackService';
+import SwipeDirectionIndicators from './SwipeDirectionIndicators';
 
 // Types for swipe detection
 export type SwipeDirection = 'left' | 'right';
@@ -30,15 +32,18 @@ export interface SwipeGestureHandlerProps {
   children: React.ReactNode;
   onSwipeComplete: (direction: SwipeDirection) => void;
   onSwipeProgress?: (progress: number, direction: SwipeDirection | null) => void;
+  onSwipeCancel?: () => void;
   thresholds?: Partial<SwipeThreshold>;
   style?: ViewStyle;
   disabled?: boolean;
+  hapticFeedback?: boolean; // Enable/disable haptic feedback (default: true)
+  showIndicators?: boolean; // Show visual direction indicators (default: false)
 }
 
 // Default thresholds for swipe detection
 const DEFAULT_THRESHOLDS: SwipeThreshold = {
-  distance: 100, // Minimum horizontal distance to trigger swipe
-  velocity: 800, // Minimum velocity to trigger immediate swipe
+  distance: 120, // Minimum horizontal distance to trigger swipe (increased for less sensitivity)
+  velocity: 500, // Minimum velocity to trigger immediate swipe (slightly increased)
 };
 
 // Animation configuration for spring animations
@@ -69,9 +74,12 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   children,
   onSwipeComplete,
   onSwipeProgress,
+  onSwipeCancel,
   thresholds = {},
   style,
   disabled = false,
+  hapticFeedback = true,
+  showIndicators = false,
 }) => {
   // Merge thresholds with defaults
   const finalThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
@@ -81,11 +89,23 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   const isGestureActive = useSharedValue(false);
   const gestureVelocity = useSharedValue(0);
   
+  // State for visual indicators
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [currentDirection, setCurrentDirection] = useState<SwipeDirection | null>(null);
+  
+  // Helper function to trigger haptic feedback based on swipe direction
+  const triggerHapticFeedback = (direction: SwipeDirection) => {
+    'worklet';
+    if (!hapticFeedback) return;
+    
+    const feedbackType: HapticFeedbackType = direction === 'left' ? 'delete' : 'keep';
+    // Call async function in background (fire and forget)
+    runOnJS(() => HapticFeedbackService.triggerFeedback(feedbackType))();
+  };
+  
   // Track swipe progress and call callback
   useAnimatedReaction(
     () => {
-      if (!onSwipeProgress) return null;
-      
       const progress = Math.abs(translateX.value) / finalThresholds.distance;
       const direction: SwipeDirection = translateX.value > 0 ? 'right' : 'left';
       
@@ -95,8 +115,17 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
       };
     },
     (result) => {
-      if (result && onSwipeProgress) {
-        runOnJS(onSwipeProgress)(result.progress, result.direction);
+      if (result) {
+        // Update indicators state if enabled
+        if (showIndicators) {
+          runOnJS(setCurrentProgress)(result.progress);
+          runOnJS(setCurrentDirection)(result.direction);
+        }
+        
+        // Call progress callback if provided
+        if (onSwipeProgress) {
+          runOnJS(onSwipeProgress)(result.progress, result.direction);
+        }
       }
     }
   );
@@ -128,6 +157,9 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
         // Complete swipe with timing animation (300ms duration)
         const targetPosition = direction === 'right' ? 500 : -500;
         
+        // Trigger haptic feedback immediately when swipe is confirmed
+        triggerHapticFeedback(direction);
+        
         translateX.value = withTiming(
           targetPosition,
           COMPLETED_SWIPE_TIMING_CONFIG,
@@ -146,6 +178,11 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
           ...SNAPBACK_CONFIG,
           velocity: event.velocityX,
         });
+        
+        // Call cancel callback if provided
+        if (onSwipeCancel) {
+          runOnJS(onSwipeCancel)();
+        }
       }
       
       isGestureActive.value = false;
@@ -197,6 +234,14 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[style, animatedStyles]}>
         {children}
+        {showIndicators && (
+          <SwipeDirectionIndicators
+            progress={currentProgress}
+            direction={currentDirection}
+            translateX={translateX}
+            isActive={isGestureActive.value}
+          />
+        )}
       </Animated.View>
     </GestureDetector>
   );

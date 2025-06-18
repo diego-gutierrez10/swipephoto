@@ -12,4 +12,7 @@ export * from './CrossCategorizationService';
 // Performance optimization services
 export * from './LazyLoadingService';
 export * from './IncrementalOrganizationService';
-export * from './PerformanceTestingService'; 
+export * from './PerformanceTestingService';
+
+// User interaction services
+export * from './HapticFeedbackService'; 

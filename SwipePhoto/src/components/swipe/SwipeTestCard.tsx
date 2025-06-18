@@ -20,7 +20,7 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
 }) => {
   const [swipeProgress, setSwipeProgress] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection | null>(null);
-  const [swipeCount, setSwipeCount] = useState({ left: 0, right: 0 });
+  const [swipeCount, setSwipeCount] = useState({ left: 0, right: 0, cancelled: 0 });
 
   const handleSwipeComplete = (direction: SwipeDirection) => {
     setSwipeCount(prev => ({
@@ -44,6 +44,12 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
     setSwipeDirection(direction);
   };
 
+  const handleSwipeCancel = () => {
+    setSwipeCount(prev => ({ ...prev, cancelled: prev.cancelled + 1 }));
+    setSwipeProgress(0);
+    setSwipeDirection(null);
+  };
+
   const getProgressColor = () => {
     if (!swipeDirection) return '#0D0D0D';
     return swipeDirection === 'left' ? '#FF3D71' : '#00D68F';
@@ -64,6 +70,9 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
         <SwipeGestureHandler
           onSwipeComplete={handleSwipeComplete}
           onSwipeProgress={handleSwipeProgress}
+          onSwipeCancel={handleSwipeCancel}
+          hapticFeedback={false}
+          showIndicators={true}
           style={styles.card}
         >
           <View style={styles.cardContent}>
@@ -140,6 +149,12 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
             Debug Info
           </Text>
           <Text style={styles.debugText}>
+            Distance Threshold: 120px
+          </Text>
+          <Text style={styles.debugText}>
+            Velocity Threshold: 500px/s
+          </Text>
+          <Text style={styles.debugText}>
             Current Direction: {swipeDirection || 'None'}
           </Text>
           <Text style={styles.debugText}>
@@ -147,6 +162,18 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
           </Text>
           <Text style={styles.debugText}>
             Total Swipes: {swipeCount.left + swipeCount.right}
+          </Text>
+          <Text style={styles.debugText}>
+            Cancelled: {swipeCount.cancelled || 0}
+          </Text>
+          <Text style={styles.debugText}>
+            Haptic Feedback: ⚠️ Disabled (Simulator)
+          </Text>
+          <Text style={styles.debugText}>
+            Visual Indicators: ✅ Enabled
+          </Text>
+          <Text style={styles.debugText}>
+            Enable haptic on physical device later
           </Text>
         </View>
       </View>
