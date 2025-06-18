@@ -285,31 +285,31 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
                     </Animated.View>
                   </PinchGestureHandler>
                   
-                  {/* Metadata Overlay */}
+                  {/* Always Visible Metadata Overlay */}
                   {metadata && (
                     <View style={styles.metadataOverlay}>
                       <LinearGradient
-                        colors={['transparent', 'rgba(0, 0, 0, 0.7)']}
+                        colors={['transparent', 'rgba(0, 0, 0, 0.8)']}
                         style={styles.metadataContainer}
                       >
+                        {/* Date - Top priority, large and bold */}
                         {metadata.date && (
-                          <Text style={styles.metadataText} numberOfLines={1}>
-                            📅 {metadata.date}
+                          <Text style={styles.metadataDateText} numberOfLines={1}>
+                            {metadata.date}
                           </Text>
                         )}
-                        {metadata.fileSize && (
-                          <Text style={styles.metadataText} numberOfLines={1}>
-                            📄 {metadata.fileSize}
-                          </Text>
-                        )}
-                        {metadata.location && (
-                          <Text style={styles.metadataText} numberOfLines={1}>
-                            📍 {metadata.location}
-                          </Text>
-                        )}
+                        
+                        {/* Source App - Secondary info */}
                         {metadata.sourceApp && (
-                          <Text style={styles.metadataText} numberOfLines={1}>
-                            📱 {metadata.sourceApp}
+                          <Text style={styles.metadataSourceText} numberOfLines={1}>
+                            {metadata.sourceApp}
+                          </Text>
+                        )}
+                        
+                        {/* Location - When available */}
+                        {metadata.location && (
+                          <Text style={styles.metadataLocationText} numberOfLines={1}>
+                            📍 {metadata.location}
                           </Text>
                         )}
                       </LinearGradient>
@@ -405,6 +405,30 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginVertical: 2,
     // Handle text overflow
+    textAlign: 'left',
+  },
+  metadataDateText: {
+    color: '#ffffff', // Pure white for primary information
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 24,
+    marginBottom: 4,
+    textAlign: 'left',
+  },
+  metadataSourceText: {
+    color: '#e0e0e0', // Slightly dimmer for secondary info
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 18,
+    marginBottom: 2,
+    textAlign: 'left',
+  },
+  metadataLocationText: {
+    color: '#d0d0d0', // Even dimmer for tertiary info
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 17,
+    marginTop: 2,
     textAlign: 'left',
   },
 });

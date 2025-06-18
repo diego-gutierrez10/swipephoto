@@ -128,31 +128,31 @@ export const SwipePhotoCard: React.FC<SwipePhotoCardProps> = ({
               accessibilityIgnoresInvertColors={true}
             />
 
-            {/* Metadata Overlay */}
+            {/* Always Visible Metadata Overlay */}
             {showMetadata && metadata && (
               <View style={styles.metadataOverlay}>
                 <LinearGradient
-                  colors={['transparent', 'rgba(0, 0, 0, 0.7)']}
+                  colors={['transparent', 'rgba(0, 0, 0, 0.8)']}
                   style={styles.metadataContainer}
                 >
+                  {/* Date - Top priority, large and bold */}
                   {metadata.date && (
-                    <Text style={styles.metadataText} numberOfLines={1}>
-                      📅 {metadata.date}
+                    <Text style={styles.metadataDateText} numberOfLines={1}>
+                      {metadata.date}
                     </Text>
                   )}
-                  {metadata.fileSize && (
-                    <Text style={styles.metadataText} numberOfLines={1}>
-                      📄 {metadata.fileSize}
-                    </Text>
-                  )}
-                  {metadata.location && (
-                    <Text style={styles.metadataText} numberOfLines={1}>
-                      📍 {metadata.location}
-                    </Text>
-                  )}
+                  
+                  {/* Source App - Secondary info */}
                   {metadata.sourceApp && (
-                    <Text style={styles.metadataText} numberOfLines={1}>
-                      📱 {metadata.sourceApp}
+                    <Text style={styles.metadataSourceText} numberOfLines={1}>
+                      {metadata.sourceApp}
+                    </Text>
+                  )}
+                  
+                  {/* Location - When available */}
+                  {metadata.location && (
+                    <Text style={styles.metadataLocationText} numberOfLines={1}>
+                      📍 {metadata.location}
                     </Text>
                   )}
                 </LinearGradient>
@@ -246,6 +246,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginVertical: 2,
+    textAlign: 'left',
+  },
+  metadataDateText: {
+    color: '#ffffff', // Pure white for primary information
+    fontSize: 16, // Slightly smaller for card format
+    fontWeight: 'bold',
+    lineHeight: 22,
+    marginBottom: 3,
+    textAlign: 'left',
+  },
+  metadataSourceText: {
+    color: '#e0e0e0', // Slightly dimmer for secondary info
+    fontSize: 13, // Smaller for card format
+    fontWeight: '500',
+    lineHeight: 17,
+    marginBottom: 2,
+    textAlign: 'left',
+  },
+  metadataLocationText: {
+    color: '#d0d0d0', // Even dimmer for tertiary info
+    fontSize: 12, // Smallest for card format
+    fontWeight: '400',
+    lineHeight: 16,
+    marginTop: 1,
     textAlign: 'left',
   },
   swipeFeedbackOverlay: {
