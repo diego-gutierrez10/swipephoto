@@ -11,9 +11,10 @@
  * - Accessibility support with ARIA roles and keyboard navigation
  * - Subtle rounded corners (8px radius)
  * - Touch event listeners for future gesture integration
+ * - Optimized performance with React.memo and proper gesture handling
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import {
   Modal,
   View,
@@ -55,11 +56,11 @@ export interface PhotoMetadata {
 }
 
 // Context interfaces for gesture handlers
-interface PinchContext {
+interface PinchContext extends Record<string, unknown> {
   startScale: number;
 }
 
-interface PanContext {
+interface PanContext extends Record<string, unknown> {
   startTranslateX: number;
   startTranslateY: number;
 }
@@ -75,7 +76,7 @@ export interface PhotoViewerProps {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export const PhotoViewer: React.FC<PhotoViewerProps> = ({
+const PhotoViewer: React.FC<PhotoViewerProps> = memo(({
   visible,
   onClose,
   imageSource,
@@ -86,9 +87,6 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const lastScale = useSharedValue(1);
-  const lastTranslateX = useSharedValue(0);
-  const lastTranslateY = useSharedValue(0);
 
   // Gesture refs
   const pinchRef = useRef(null);
@@ -100,100 +98,86 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
   const MAX_SCALE = 3;
 
   // Handle background press to close
-  const handleBackgroundPress = () => {
+  const handleBackgroundPress = useCallback(() => {
     onClose();
-  };
+  }, [onClose]);
 
   // Handle close button press
-  const handleClosePress = () => {
+  const handleClosePress = useCallback(() => {
     onClose();
-  };
+  }, [onClose]);
 
   // Reset zoom when opening/closing
-  const resetZoom = () => {
+  const resetZoom = useCallback(() => {
+    'worklet';
     scale.value = withSpring(1);
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
-    lastScale.value = 1;
-    lastTranslateX.value = 0;
-    lastTranslateY.value = 0;
-  };
+  }, [scale, translateX, translateY]);
 
   // Reset zoom when component becomes visible
   React.useEffect(() => {
     if (visible) {
       resetZoom();
     }
-  }, [visible]);
+  }, [visible, resetZoom]);
 
-  // Handle pinch gesture
-  const onPinchGestureEvent = (event: any) => {
-    'worklet';
-    const newScale = Math.min(Math.max(lastScale.value * event.scale, MIN_SCALE), MAX_SCALE);
-    scale.value = newScale;
-  };
-
-  const onPinchStateChange = (event: any) => {
-    'worklet';
-    if (event.state === State.END) {
-      lastScale.value = scale.value;
-      
+  // Handle pinch gesture - using useAnimatedGestureHandler for proper worklet handling
+  const pinchGestureHandler = useAnimatedGestureHandler<PinchGestureHandlerGestureEvent, PinchContext>({
+    onStart: (_, context) => {
+      context.startScale = scale.value;
+    },
+    onActive: (event, context) => {
+      const newScale = Math.min(Math.max(context.startScale * event.scale, MIN_SCALE), MAX_SCALE);
+      scale.value = newScale;
+    },
+    onEnd: () => {
       // Snap back to bounds if needed
       if (scale.value < MIN_SCALE) {
         scale.value = withSpring(MIN_SCALE);
-        lastScale.value = MIN_SCALE;
       } else if (scale.value > MAX_SCALE) {
         scale.value = withSpring(MAX_SCALE);
-        lastScale.value = MAX_SCALE;
       }
-    }
-  };
+    },
+  });
 
-  // Handle pan gesture
-  const onPanGestureEvent = (event: any) => {
-    'worklet';
-    // Only allow panning when zoomed in
-    if (scale.value > 1) {
-      // Calculate boundaries
-      const maxTranslateX = (screenWidth * (scale.value - 1)) / 2;
-      const maxTranslateY = (screenHeight * (scale.value - 1)) / 2;
-      
-      const newTranslateX = lastTranslateX.value + event.translationX;
-      const newTranslateY = lastTranslateY.value + event.translationY;
-      
-      // Constrain to boundaries
-      translateX.value = Math.min(Math.max(newTranslateX, -maxTranslateX), maxTranslateX);
-      translateY.value = Math.min(Math.max(newTranslateY, -maxTranslateY), maxTranslateY);
-    }
-  };
+  // Handle pan gesture - using useAnimatedGestureHandler for proper worklet handling
+  const panGestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent, PanContext>({
+    onStart: (_, context) => {
+      context.startTranslateX = translateX.value;
+      context.startTranslateY = translateY.value;
+    },
+    onActive: (event, context) => {
+      // Only allow panning when zoomed in
+      if (scale.value > 1) {
+        // Calculate boundaries based on current scale
+        const maxTranslateX = (screenWidth * (scale.value - 1)) / 2;
+        const maxTranslateY = (screenHeight * (scale.value - 1)) / 2;
+        
+        const newTranslateX = context.startTranslateX + event.translationX;
+        const newTranslateY = context.startTranslateY + event.translationY;
+        
+        // Constrain to boundaries
+        translateX.value = Math.min(Math.max(newTranslateX, -maxTranslateX), maxTranslateX);
+        translateY.value = Math.min(Math.max(newTranslateY, -maxTranslateY), maxTranslateY);
+      }
+    },
+  });
 
-  const onPanStateChange = (event: any) => {
-    'worklet';
-    if (event.state === State.END) {
-      lastTranslateX.value = translateX.value;
-      lastTranslateY.value = translateY.value;
-    }
-  };
-
-  // Handle double tap
-  const onDoubleTap = (event: any) => {
-    'worklet';
-    if (event.state === State.ACTIVE) {
+  // Handle double tap - using useAnimatedGestureHandler for proper worklet handling
+  const doubleTapHandler = useAnimatedGestureHandler<TapGestureHandlerGestureEvent>({
+    onActive: () => {
       if (scale.value > 1) {
         // Zoom out to 1x
         scale.value = withSpring(1);
         translateX.value = withSpring(0);
         translateY.value = withSpring(0);
-        lastScale.value = 1;
-        lastTranslateX.value = 0;
-        lastTranslateY.value = 0;
       } else {
         // Zoom in to 2x
         scale.value = withSpring(2);
-        lastScale.value = 2;
       }
-    }
-  };
+    },
+  });
 
   // Animated style for the image container
   const animatedStyle = useAnimatedStyle(() => {
@@ -207,10 +191,10 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
   });
 
   // Prevent event bubbling when pressing on the image
-  const handleImagePress = () => {
+  const handleImagePress = useCallback(() => {
     // Prevent closing when tapping the image itself
     // This will be used for metadata toggle in future subtasks
-  };
+  }, []);
 
   return (
     <Modal
@@ -251,19 +235,17 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
               <TapGestureHandler
                 ref={doubleTapRef}
                 numberOfTaps={2}
-                onHandlerStateChange={onDoubleTap}
+                onGestureEvent={doubleTapHandler}
               >
                 <Animated.View style={styles.imageContainer}>
                   <PinchGestureHandler
                     ref={pinchRef}
-                    onGestureEvent={onPinchGestureEvent}
-                    onHandlerStateChange={onPinchStateChange}
+                    onGestureEvent={pinchGestureHandler}
                   >
                     <Animated.View style={animatedStyle}>
                       <PanGestureHandler
                         ref={panRef}
-                        onGestureEvent={onPanGestureEvent}
-                        onHandlerStateChange={onPanStateChange}
+                        onGestureEvent={panGestureHandler}
                         minPointers={1}
                         maxPointers={1}
                       >
@@ -323,7 +305,9 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
       </SafeAreaView>
     </Modal>
   );
-};
+});
+
+PhotoViewer.displayName = 'PhotoViewer';
 
 const styles = StyleSheet.create({
   container: {
