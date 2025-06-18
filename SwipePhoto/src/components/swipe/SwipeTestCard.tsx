@@ -5,9 +5,10 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SwipeGestureHandler, SwipeDirection } from './SwipeGestureHandler';
+import { PhotoViewer } from '../photo/PhotoViewer';
 
 export interface SwipeTestCardProps {
   imageUri?: string;
@@ -21,6 +22,7 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
   const [swipeProgress, setSwipeProgress] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection | null>(null);
   const [swipeCount, setSwipeCount] = useState({ left: 0, right: 0, cancelled: 0 });
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
 
   const handleSwipeComplete = (direction: SwipeDirection) => {
     setSwipeCount(prev => ({
@@ -48,6 +50,14 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
     setSwipeCount(prev => ({ ...prev, cancelled: prev.cancelled + 1 }));
     setSwipeProgress(0);
     setSwipeDirection(null);
+  };
+
+  const handleOpenPhotoViewer = () => {
+    setPhotoViewerVisible(true);
+  };
+
+  const handleClosePhotoViewer = () => {
+    setPhotoViewerVisible(false);
   };
 
   const getProgressColor = () => {
@@ -175,7 +185,35 @@ export const SwipeTestCard: React.FC<SwipeTestCardProps> = ({
           <Text style={styles.debugText}>
             Enable haptic on physical device later
           </Text>
+          
+          {/* Photo Viewer Test Button */}
+          <TouchableOpacity
+            style={styles.photoViewerButton}
+            onPress={handleOpenPhotoViewer}
+            accessibilityRole="button"
+            accessibilityLabel="Open photo viewer test"
+          >
+            <Text style={styles.photoViewerButtonText}>
+              📷 Test Photo Viewer (Task 6.1)
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Photo Viewer Component */}
+        <PhotoViewer
+          visible={photoViewerVisible}
+          onClose={handleClosePhotoViewer}
+          imageSource={{
+            uri: 'https://picsum.photos/800/600?random=1'
+          }}
+          altText="Test photo for PhotoViewer component"
+          metadata={{
+            date: new Date().toLocaleDateString(),
+            fileSize: '2.1 MB',
+            location: 'San Francisco, CA',
+            sourceApp: 'SwipePhoto Test'
+          }}
+        />
       </View>
     </GestureHandlerRootView>
   );
@@ -313,6 +351,19 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     textAlign: 'center',
     color: '#CCCCCC',
+  },
+  photoViewerButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  photoViewerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
