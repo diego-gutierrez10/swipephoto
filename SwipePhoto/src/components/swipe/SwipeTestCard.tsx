@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SwipeGestureHandler, SwipeDirection } from './SwipeGestureHandler';
-import { PhotoViewer } from '../photo/PhotoViewer';
+import PhotoViewer from '../photo/PhotoViewer';
 
 export interface SwipeTestCardProps {
   imageUri?: string;

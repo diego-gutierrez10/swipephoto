@@ -46,6 +46,7 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
+import { usePhotoTransition, usePhotoNavigation } from '../../hooks';
 
 // Photo metadata interface
 export interface PhotoMetadata {
@@ -72,6 +73,13 @@ export interface PhotoViewerProps {
   imageSource: ImageSourcePropType;
   altText?: string;
   metadata?: PhotoMetadata;
+  // Animation options
+  enableFadeIn?: boolean;
+  animationDuration?: number;
+  // Navigation support (for future multi-photo support)
+  onPhotoChange?: (index: number) => void;
+  currentPhotoIndex?: number;
+  enableNavigationTransitions?: boolean;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -82,6 +90,13 @@ const PhotoViewer: React.FC<PhotoViewerProps> = memo(({
   imageSource,
   altText = 'Photo',
   metadata,
+  // Animation options
+  enableFadeIn,
+  animationDuration,
+  // Navigation support (for future multi-photo support)
+  onPhotoChange,
+  currentPhotoIndex,
+  enableNavigationTransitions,
 }) => {
   // Zoom and pan state
   const scale = useSharedValue(1);
@@ -96,6 +111,27 @@ const PhotoViewer: React.FC<PhotoViewerProps> = memo(({
   // Constants
   const MIN_SCALE = 1;
   const MAX_SCALE = 3;
+
+  // Image loading state for transitions
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Photo transition animations
+  const { animatedStyle: fadeInStyle } = usePhotoTransition(
+    visible && imageLoaded && enableFadeIn !== false,
+    {
+      duration: animationDuration || 200,
+    }
+  );
+
+  // Photo navigation support
+  const { navigateToPhoto } = usePhotoNavigation(
+    onPhotoChange || (() => {}),
+    {
+      zoomResetDuration: 150,
+      transitionDuration: animationDuration || 200,
+      autoResetZoom: enableNavigationTransitions !== false,
+    }
+  );
 
   // Handle background press to close
   const handleBackgroundPress = useCallback(() => {
@@ -121,6 +157,26 @@ const PhotoViewer: React.FC<PhotoViewerProps> = memo(({
       resetZoom();
     }
   }, [visible, resetZoom]);
+
+  // Handle image load events for transitions
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setImageLoaded(false);
+  }, []);
+
+  // Reset image loaded state when modal closes or image source changes
+  React.useEffect(() => {
+    if (!visible) {
+      setImageLoaded(false);
+    }
+  }, [visible]);
+
+  React.useEffect(() => {
+    setImageLoaded(false);
+  }, [imageSource]);
 
   // Handle pinch gesture - using useAnimatedGestureHandler for proper worklet handling
   const pinchGestureHandler = useAnimatedGestureHandler<PinchGestureHandlerGestureEvent, PinchContext>({
@@ -255,12 +311,16 @@ const PhotoViewer: React.FC<PhotoViewerProps> = memo(({
                             accessibilityRole="image"
                             accessibilityLabel={altText}
                           >
-                            <Image
-                              source={imageSource}
-                              style={styles.image}
-                              resizeMode="contain"
-                              accessibilityIgnoresInvertColors={true}
-                            />
+                            <Animated.View style={enableFadeIn !== false ? fadeInStyle : undefined}>
+                              <Image
+                                source={imageSource}
+                                style={styles.image}
+                                resizeMode="contain"
+                                accessibilityIgnoresInvertColors={true}
+                                onLoad={handleImageLoad}
+                                onError={handleImageError}
+                              />
+                            </Animated.View>
                           </Pressable>
                         </Animated.View>
                       </PanGestureHandler>

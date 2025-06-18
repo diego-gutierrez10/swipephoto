@@ -24,7 +24,9 @@ import {
   Pressable,
 } from 'react-native';
 import FastImage, { ResizeMode, ImageStyle as FastImageStyle } from 'react-native-fast-image';
+import Animated from 'react-native-reanimated';
 import { useOptimizedImage, UseOptimizedImageOptions } from '../../hooks/useOptimizedImage';
+import { usePhotoTransition, PhotoTransitionOptions } from '../../hooks/usePhotoTransition';
 
 export interface OptimizedImageProps extends UseOptimizedImageOptions {
   source: string;
@@ -40,6 +42,9 @@ export interface OptimizedImageProps extends UseOptimizedImageOptions {
   placeholder?: React.ReactNode;
   errorComponent?: React.ReactNode;
   loadingComponent?: React.ReactNode;
+  // Animation options
+  enableFadeIn?: boolean;
+  animationOptions?: PhotoTransitionOptions;
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -56,6 +61,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   placeholder,
   errorComponent,
   loadingComponent,
+  enableFadeIn = true,
+  animationOptions = {},
   ...optimizationOptions
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -67,6 +74,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     loadProgress,
     retry,
   } = useOptimizedImage(source, optimizationOptions);
+
+  // Use fade-in animation when enabled
+  const { animatedStyle, resetAnimation } = usePhotoTransition(
+    imageLoaded && !hasError && !isLoading && enableFadeIn,
+    animationOptions
+  );
 
   // Handle image load completion
   const handleLoad = useCallback(() => {
@@ -83,8 +96,9 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Handle retry action
   const handleRetry = useCallback(() => {
     setImageLoaded(false);
+    resetAnimation(); // Reset animation when retrying
     retry();
-  }, [retry]);
+  }, [retry, resetAnimation]);
 
   // Render loading state
   const renderLoading = () => {
@@ -139,8 +153,24 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     );
   };
 
-  // Main image component
-  const imageComponent = (
+  // Main image component with animation
+  const imageComponent = enableFadeIn ? (
+    <Animated.View style={animatedStyle}>
+      <FastImage
+        source={{
+          uri: optimizedSource.uri,
+          priority: FastImage.priority.normal,
+          cache: FastImage.cacheControl.immutable,
+        }}
+        style={[styles.image, style]}
+        resizeMode={resizeMode}
+        onLoad={handleLoad}
+        onError={handleError}
+        accessibilityIgnoresInvertColors={true}
+        accessibilityLabel={altText}
+      />
+    </Animated.View>
+  ) : (
     <FastImage
       source={{
         uri: optimizedSource.uri,
