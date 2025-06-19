@@ -15,4 +15,7 @@ export * from './IncrementalOrganizationService';
 export * from './PerformanceTestingService';
 
 // User interaction services
-export * from './HapticFeedbackService'; 
+export * from './HapticFeedbackService';
+
+export { default as PhotoPermissionsService } from './PhotoPermissionsService';
+export { default as PhotoPreloadingService } from './PhotoPreloadingService'; 

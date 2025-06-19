@@ -5,7 +5,7 @@
  * and Gesture Handler for detecting and tracking horizontal swipe movements.
  */
 
-import React, { useState } from 'react';
+import React, { useState, ReactNode, useCallback, useRef } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -16,10 +16,13 @@ import Animated, {
   useAnimatedReaction,
   Easing,
   interpolate,
+  Extrapolate,
 } from 'react-native-reanimated';
-import { ViewStyle } from 'react-native';
+import { ViewStyle, Dimensions, Alert } from 'react-native';
 import { HapticFeedbackService, HapticFeedbackType } from '../../services/HapticFeedbackService';
 import SwipeDirectionIndicators from './SwipeDirectionIndicators';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Types for swipe detection
 export type SwipeDirection = 'left' | 'right';
@@ -29,11 +32,15 @@ export type SwipeThreshold = {
 };
 
 export interface SwipeGestureHandlerProps {
-  children: React.ReactNode;
-  onSwipeComplete: (direction: SwipeDirection) => void;
+  children: ReactNode;
+  onSwipeComplete?: (direction: SwipeDirection) => void;
+  isEnabled?: boolean;
+  threshold?: number;
+  // New animation props for real-time feedback
+  translateX?: Animated.SharedValue<number>;
   onSwipeProgress?: (progress: number, direction: SwipeDirection | null) => void;
-  onSwipeCancel?: () => void;
-  thresholds?: Partial<SwipeThreshold>;
+  onSwipeStart?: () => void;
+  onSwipeEnd?: () => void;
   style?: ViewStyle;
   disabled?: boolean;
   hapticFeedback?: boolean; // Enable/disable haptic feedback (default: true)
@@ -73,22 +80,27 @@ const SNAPBACK_CONFIG = {
 export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   children,
   onSwipeComplete,
+  isEnabled = true,
+  threshold = 120,
+  translateX: externalTranslateX,
   onSwipeProgress,
-  onSwipeCancel,
-  thresholds = {},
+  onSwipeStart,
+  onSwipeEnd,
   style,
   disabled = false,
   hapticFeedback = true,
   showIndicators = false,
 }) => {
-  // Merge thresholds with defaults
-  const finalThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
-  
-  // Shared values for gesture tracking
-  const translateX = useSharedValue(0);
-  const isGestureActive = useSharedValue(false);
-  const gestureVelocity = useSharedValue(0);
-  
+  // Create internal shared values for animation
+  const internalTranslateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const rotate = useSharedValue(0);
+  const isAnimating = useSharedValue(false);
+
+  // Use external translateX if provided, otherwise use internal
+  const activeTranslateX = externalTranslateX || internalTranslateX;
+
   // State for visual indicators
   const [currentProgress, setCurrentProgress] = useState(0);
   const [currentDirection, setCurrentDirection] = useState<SwipeDirection | null>(null);
@@ -103,143 +115,120 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
     runOnJS(() => HapticFeedbackService.triggerFeedback(feedbackType))();
   };
   
-  // Track swipe progress and call callback
-  useAnimatedReaction(
-    () => {
-      const progress = Math.abs(translateX.value) / finalThresholds.distance;
-      const direction: SwipeDirection = translateX.value > 0 ? 'right' : 'left';
-      
-      return {
-        progress: Math.min(progress, 1),
-        direction: Math.abs(translateX.value) > 10 ? direction : null,
-      };
-    },
-    (result) => {
-      if (result) {
-        // Update indicators state if enabled
-        if (showIndicators) {
-          runOnJS(setCurrentProgress)(result.progress);
-          runOnJS(setCurrentDirection)(result.direction);
-        }
-        
-        // Call progress callback if provided
-        if (onSwipeProgress) {
-          runOnJS(onSwipeProgress)(result.progress, result.direction);
-        }
-      }
-    }
-  );
-
-  // Create optimized pan gesture with proper velocity tracking
+  // Create optimized pan gesture with real-time animation
   const panGesture = Gesture.Pan()
-    .enabled(!disabled)
-    .activeOffsetX([-10, 10]) // Reduce unintentional triggers
-    .failOffsetY([-20, 20]) // Fail if vertical movement is too large
+    .enabled(!disabled && isEnabled)
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-20, 20])
     .onBegin(() => {
       'worklet';
-      isGestureActive.value = true;
+      if (onSwipeStart) {
+        runOnJS(onSwipeStart)();
+      }
     })
     .onUpdate((event) => {
       'worklet';
-      // Use direct value assignment for <100ms response
-      translateX.value = event.translationX;
-      gestureVelocity.value = event.velocityX;
+      if (!isEnabled) return;
+
+      // Update position
+      activeTranslateX.value = event.translationX;
+      translateY.value = event.translationY * 0.2; // Slight vertical movement
+
+      // Calculate rotation based on horizontal movement
+      const rotationAngle = interpolate(
+        activeTranslateX.value,
+        [-screenWidth / 2, 0, screenWidth / 2],
+        [-15, 0, 15],
+        Extrapolate.CLAMP
+      );
+      rotate.value = rotationAngle;
+
+      // Calculate scale (slight shrink during drag)
+      scale.value = interpolate(
+        Math.abs(activeTranslateX.value),
+        [0, screenWidth * 0.5],
+        [1, 0.95],
+        Extrapolate.CLAMP
+      );
+
+      // Calculate progress and direction for callbacks
+      const progress = Math.abs(activeTranslateX.value) / threshold;
+      const direction = activeTranslateX.value > 0 ? 'right' : 'left';
+
+      if (onSwipeProgress && Math.abs(activeTranslateX.value) > 10) {
+        runOnJS(onSwipeProgress)(Math.min(progress, 1), direction);
+      }
     })
     .onEnd((event) => {
       'worklet';
-      const shouldSwipe = 
-        Math.abs(event.velocityX) > finalThresholds.velocity || 
-        Math.abs(translateX.value) > finalThresholds.distance;
-      
-      const direction: SwipeDirection = translateX.value > 0 ? 'right' : 'left';
-      
+      if (!isEnabled) return;
+
+      const shouldSwipe = Math.abs(activeTranslateX.value) > threshold;
+      const direction: SwipeDirection = activeTranslateX.value > 0 ? 'right' : 'left';
+
       if (shouldSwipe) {
-        // Complete swipe with timing animation (300ms duration)
-        const targetPosition = direction === 'right' ? 500 : -500;
+        // Animate to completion
+        isAnimating.value = true;
+        const targetX = direction === 'right' ? screenWidth * 1.5 : -screenWidth * 1.5;
         
-        // Trigger haptic feedback immediately when swipe is confirmed
-        triggerHapticFeedback(direction);
-        
-        translateX.value = withTiming(
-          targetPosition,
-          COMPLETED_SWIPE_TIMING_CONFIG,
-          (finished) => {
-            'worklet';
-            if (finished) {
+        activeTranslateX.value = withTiming(targetX, { duration: 300 }, (finished) => {
+          'worklet';
+          if (finished) {
+            // Reset position for next card
+            activeTranslateX.value = 0;
+            translateY.value = 0;
+            rotate.value = 0;
+            scale.value = 1;
+            isAnimating.value = false;
+            
+            if (onSwipeComplete) {
               runOnJS(onSwipeComplete)(direction);
-              // Reset position after callback
-              translateX.value = 0;
             }
           }
-        );
-      } else {
-        // Return to center with snap-back animation
-        translateX.value = withSpring(0, {
-          ...SNAPBACK_CONFIG,
-          velocity: event.velocityX,
         });
         
-        // Call cancel callback if provided
-        if (onSwipeCancel) {
-          runOnJS(onSwipeCancel)();
+        translateY.value = withTiming(0, { duration: 300 });
+        rotate.value = withTiming(direction === 'right' ? 20 : -20, { duration: 300 });
+        scale.value = withTiming(0.8, { duration: 300 });
+      } else {
+        // Snap back to center
+        activeTranslateX.value = withSpring(0, { damping: 20, stiffness: 300 });
+        translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+        rotate.value = withSpring(0, { damping: 20, stiffness: 300 });
+        scale.value = withSpring(1, { damping: 20, stiffness: 300 });
+        
+        if (onSwipeProgress) {
+          runOnJS(onSwipeProgress)(0, null);
         }
       }
-      
-      isGestureActive.value = false;
-    })
-    .onFinalize(() => {
-      'worklet';
-      isGestureActive.value = false;
+
+      if (onSwipeEnd) {
+        runOnJS(onSwipeEnd)();
+      }
     });
 
-  // Optimized animated styles using worklets
-  const animatedStyles = useAnimatedStyle(() => {
-    'worklet';
-    
-    // Calculate rotation for natural card feel (max ±20 degrees)
-    // Use interpolation for smoother rotation mapping
-    const rotation = interpolate(
-      translateX.value,
-      [-200, 0, 200],
-      [-20, 0, 20]
-    );
-    
-    // Enhanced scale effect: lift up during gesture (1.02-1.05 range)
-    const gestureProgress = Math.abs(translateX.value) / 100;
-    const scaleFromGesture = interpolate(
-      gestureProgress,
-      [0, 1],
-      [1, 1.03] // Subtle lift effect
-    );
-    const scale = isGestureActive.value ? scaleFromGesture : 1;
-    
-    // Add subtle opacity effect for cards being swiped away
-    const opacity = interpolate(
-      Math.abs(translateX.value),
-      [0, 150, 300],
-      [1, 0.8, 0.5]
-    );
-    
+  // Animated style for the container
+  const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { translateX: translateX.value },
-        { rotate: `${rotation}deg` },
-        { scale: withSpring(scale, { damping: 20, stiffness: 300, mass: 1 }) },
+        { translateX: activeTranslateX.value },
+        { translateY: translateY.value },
+        { rotate: `${rotate.value}deg` },
+        { scale: scale.value },
       ],
-      opacity: opacity,
     };
   });
 
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={[style, animatedStyles]}>
+      <Animated.View style={[style, animatedStyle]}>
         {children}
         {showIndicators && (
           <SwipeDirectionIndicators
             progress={currentProgress}
             direction={currentDirection}
-            translateX={translateX}
-            isActive={isGestureActive.value}
+            translateX={activeTranslateX}
+            isActive={isAnimating.value}
           />
         )}
       </Animated.View>
