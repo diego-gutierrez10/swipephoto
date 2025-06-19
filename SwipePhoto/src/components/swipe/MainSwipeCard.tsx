@@ -11,6 +11,7 @@ import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SwipeGestureHandler, { SwipeDirection } from './SwipeGestureHandler';
 import PhotoStack from '../photo/PhotoStack';
+import { PhotoCounter } from '../ui';
 import type { PhotoItem } from '../../services/PhotoPreloadingService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -167,12 +168,17 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
         </View>
       </View>
 
-      {/* Current photo info */}
-      <View style={styles.photoInfo}>
-        <Text style={styles.photoInfoText}>
-          📸 {currentIndex + 1} / {photos.length}
-        </Text>
-        <Text style={styles.photoInfoText}>
+      {/* Photo Counter - Task 8.2 implementation */}
+      <PhotoCounter
+        current={currentIndex + 1}
+        total={photos.length}
+        style={styles.photoCounter}
+        testID="main-swipe-photo-counter"
+      />
+
+      {/* Date info */}
+      <View style={styles.dateInfo}>
+        <Text style={styles.dateText}>
           📅 {new Date().toLocaleDateString()}
         </Text>
       </View>
@@ -275,21 +281,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Photo info
-  photoInfo: {
+  // Photo Counter - Task 8.2
+  photoCounter: {
     position: 'absolute',
-    bottom: 40,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    bottom: 60,
     zIndex: 10,
   },
-  photoInfoText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginVertical: 2,
+
+  // Date info
+  dateInfo: {
+    position: 'absolute',
+    bottom: 20,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 10,
+  },
+  dateText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
   },
 });
 

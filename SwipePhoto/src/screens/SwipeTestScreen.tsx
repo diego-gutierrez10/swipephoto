@@ -10,11 +10,13 @@ import { SwipeTestCard } from '../components/swipe/SwipeTestCard';
 import { SwipePhotoCard } from '../components/swipe/SwipePhotoCard';
 import MainSwipeCard from '../components/swipe/MainSwipeCard';
 import { MainSwipeScreen } from './MainSwipeScreen';
+import CategoryProgressDemoScreen from './CategoryProgressDemoScreen';
 
 export const SwipeTestScreen: React.FC = () => {
   const [showPhotoCard, setShowPhotoCard] = useState(false);
   const [showMainSwipe, setShowMainSwipe] = useState(false);
   const [showMainSwipeScreen, setShowMainSwipeScreen] = useState(false);
+  const [showCategoryProgress, setShowCategoryProgress] = useState(false);
 
   const handlePhotoDelete = () => {
     console.log('Photo deleted!');
@@ -36,6 +38,17 @@ export const SwipeTestScreen: React.FC = () => {
     console.log('Main Swipe Queue Complete!');
     // Could navigate to next screen or show completion message
   };
+
+  // If showing category progress demo (Task 8.3), render full screen
+  if (showCategoryProgress) {
+    return (
+      <CategoryProgressDemoScreen 
+        navigation={{ 
+          goBack: () => setShowCategoryProgress(false) 
+        }} 
+      />
+    );
+  }
 
   // If showing main swipe screen layout (Task 7.4), render full screen
   if (showMainSwipeScreen) {
@@ -152,6 +165,18 @@ export const SwipeTestScreen: React.FC = () => {
               🏗️ Test Main Swipe Screen Layout (Task 7.4)
             </Text>
           </TouchableOpacity>
+
+          {/* Test Category Progress Tracker (Task 8.3) */}
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={() => setShowCategoryProgress(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Test Category Progress Tracker for Task 8.3"
+          >
+            <Text style={styles.testButtonText}>
+              📊 Test Category Progress (Task 8.3)
+            </Text>
+          </TouchableOpacity>
           
           {/* Conditional Card Display */}
           {showPhotoCard ? (
@@ -183,6 +208,7 @@ export const SwipeTestScreen: React.FC = () => {
             {'\n\n📸 Task 7.2: PhotoStack with Preloading & Memory Management'}
             {'\n🎯 Task 7.3: Visual Animations like Tinder (rotation, scale, flyoff)'}
             {'\n🏗️ Task 7.4: Main Swipe Screen Layout (responsive, minimal UI)'}
+            {'\n📊 Task 8.3: Category Completion Indicators (progress tracking)'}
           </Text>
         </View>
       </ScrollView>
