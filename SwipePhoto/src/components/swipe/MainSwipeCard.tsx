@@ -12,6 +12,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SwipeGestureHandler, { SwipeDirection } from './SwipeGestureHandler';
 import PhotoStack from '../photo/PhotoStack';
 import { PhotoCounter } from '../ui';
+import { EnhancedUndoButton } from '../undo/EnhancedUndoButton';
+import { UndoVisualFeedback } from '../undo/UndoVisualFeedback';
+import { useUndo } from '../../hooks/useUndo';
+import { useAppDispatch } from '../../store';
+import { recordAndDispatchSwipeAction } from '../../store/thunks/undoThunks';
 import type { PhotoItem } from '../../services/PhotoPreloadingService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -29,6 +34,12 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
   onSwipeComplete,
   onPhotoChange,
 }) => {
+  // Redux dispatch for undo functionality
+  const dispatch = useAppDispatch();
+  
+  // Undo system integration
+  const { canUndo, undoCount, undo, recordSwipe, visualFeedback } = useUndo();
+  
   // Counters for testing swipe functionality
   const [keepCount, setKeepCount] = useState(0);
   const [deleteCount, setDeleteCount] = useState(0);
@@ -44,7 +55,20 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
   // Current photo for display
   const currentPhoto = photos[currentIndex];
 
-  const handleSwipeComplete = useCallback((direction: SwipeDirection) => {
+  const handleSwipeComplete = useCallback(async (direction: SwipeDirection) => {
+    // Record the swipe action in undo stack BEFORE making changes
+    if (currentPhoto) {
+      recordSwipe(
+        currentPhoto.id,
+        direction,
+        currentIndex,
+        {
+          categoryId: 'main-swipe',
+          sessionId: `session-${Date.now()}`,
+        }
+      );
+    }
+
     // Trigger haptic feedback and update counters
     if (direction === 'right') {
       setKeepCount(prev => prev + 1);
@@ -65,7 +89,7 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
 
     // Call parent callback
     onSwipeComplete(direction);
-  }, [onSwipeComplete, onPhotoChange, currentIndex, photos.length]);
+  }, [onSwipeComplete, onPhotoChange, currentIndex, currentPhoto, recordSwipe, photos.length]);
 
   const handleSwipeProgress = useCallback((progress: number, direction: SwipeDirection | null) => {
     setSwipeProgress(progress);
@@ -182,6 +206,24 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
           📅 {new Date().toLocaleDateString()}
         </Text>
       </View>
+
+      {/* Undo Button - Task 9 Implementation */}
+      <EnhancedUndoButton
+        position={{ bottom: 200, right: 20 }}
+        size={56}
+        style={styles.undoButton}
+        enableHaptics={true}
+        testID="main-swipe-undo-button"
+      />
+
+      {/* Visual Feedback for Undo Actions - Task 9.5 */}
+      <UndoVisualFeedback
+        visible={false}
+        type="card-restored"
+        style={styles.undoFeedback}
+        enableSound={true}
+        reducedMotion={false}
+      />
     </GestureHandlerRootView>
   );
 };
@@ -302,6 +344,23 @@ const styles = StyleSheet.create({
   dateText: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
+  },
+
+  // Undo Button - Task 9
+  undoButton: {
+    position: 'absolute',
+    bottom: 200,
+    right: 20,
+    zIndex: 20,
+  },
+
+  // Undo Visual Feedback - Task 9.5
+  undoFeedback: {
+    position: 'absolute',
+    top: screenHeight * 0.4,
+    left: 0,
+    right: 0,
+    zIndex: 15,
   },
 });
 
