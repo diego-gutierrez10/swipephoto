@@ -5,6 +5,7 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 import photoSlice from './slices/photoSlice';
 import categorySlice from './slices/categorySlice';
 import organizationReducer from './slices/organizationSlice';
+import progressReducer from './slices/progressSlice';
 
 // Import middleware
 import { createEnhancedBatchMiddleware } from './middleware/simpleBatchMiddleware';
@@ -14,6 +15,7 @@ export const store = configureStore({
     photos: photoSlice,
     categories: categorySlice,
     organization: organizationReducer,
+    progress: progressReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

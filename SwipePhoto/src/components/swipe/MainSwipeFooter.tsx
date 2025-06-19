@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { ProgressBar } from '../ui/ProgressBar';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -49,12 +50,17 @@ export const MainSwipeFooter: React.FC<MainSwipeFooterProps> = ({
     <View style={styles.container}>
       {/* Progress Indicator */}
       <View style={styles.progressSection}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-        <Text style={styles.progressText}>
-          {currentPhoto} of {totalPhotos}
-        </Text>
+        <ProgressBar 
+          current={currentPhoto}
+          total={totalPhotos}
+          width={screenWidth * 0.6}
+          height={4}
+          showText={true}
+          textFormat="fraction"
+          backgroundColor="rgba(255, 255, 255, 0.2)"
+          fillColor="#007AFF"
+          accessibilityLabel={`Photo progress: ${currentPhoto} of ${totalPhotos}`}
+        />
       </View>
 
       {/* Counters Section */}
@@ -115,23 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  progressBar: {
-    width: screenWidth * 0.6,
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#007AFF',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 4,
-  },
+
   countersSection: {
     flexDirection: 'row',
     justifyContent: 'center',
