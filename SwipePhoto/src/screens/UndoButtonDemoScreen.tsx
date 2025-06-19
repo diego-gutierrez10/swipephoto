@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedUndoButton } from '../components/undo/AnimatedUndoButton';
+import { EnhancedUndoButton } from '../components/undo/EnhancedUndoButton';
 import { useUndo } from '../hooks/useUndo';
 
 interface DemoPhoto {
@@ -242,10 +243,15 @@ export const UndoButtonDemoScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Floating Animated Undo Button */}
-      <AnimatedUndoButton
+      {/* Floating Enhanced Undo Button with animations */}
+      <EnhancedUndoButton
         enableHaptics={true}
-        testID="demo-undo-button"
+        animationConfig={{
+          duration: 150,
+          pressedScale: 0.92,
+          respectReduceMotion: true,
+        }}
+        testID="demo-enhanced-undo-button"
       />
     </SafeAreaView>
   );

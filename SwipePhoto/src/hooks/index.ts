@@ -16,4 +16,5 @@ export { default as usePhotoNavigation } from './usePhotoNavigation';
 export type { PhotoNavigationOptions, PhotoNavigationReturn } from './usePhotoNavigation';
 
 // Undo functionality
-export { useUndo } from './useUndo'; 
+export { useUndo } from './useUndo';
+export { useButtonAnimation } from './useButtonAnimation'; 

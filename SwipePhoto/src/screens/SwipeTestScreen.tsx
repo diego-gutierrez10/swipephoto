@@ -12,6 +12,7 @@ import MainSwipeCard from '../components/swipe/MainSwipeCard';
 import { MainSwipeScreen } from './MainSwipeScreen';
 import CategoryProgressDemoScreen from './CategoryProgressDemoScreen';
 import ProgressSystemDemoScreen from './ProgressSystemDemoScreen';
+import { UndoButtonDemoScreen } from './UndoButtonDemoScreen';
 
 export const SwipeTestScreen: React.FC = () => {
   const [showPhotoCard, setShowPhotoCard] = useState(false);
@@ -19,6 +20,7 @@ export const SwipeTestScreen: React.FC = () => {
   const [showMainSwipeScreen, setShowMainSwipeScreen] = useState(false);
   const [showCategoryProgress, setShowCategoryProgress] = useState(false);
   const [showProgressSystemDemo, setShowProgressSystemDemo] = useState(false);
+  const [showUndoDemo, setShowUndoDemo] = useState(false);
 
   const handlePhotoDelete = () => {
     console.log('Photo deleted!');
@@ -40,6 +42,21 @@ export const SwipeTestScreen: React.FC = () => {
     console.log('Main Swipe Queue Complete!');
     // Could navigate to next screen or show completion message
   };
+
+  // If showing undo demo (Task 9.2), render full screen
+  if (showUndoDemo) {
+    return (
+      <View style={{ flex: 1 }}>
+        <UndoButtonDemoScreen />
+        <TouchableOpacity 
+          style={[styles.backButton, { position: 'absolute', top: 60, left: 20, zIndex: 1001 }]}
+          onPress={() => setShowUndoDemo(false)}
+        >
+          <Text style={styles.backButtonText}>← Back to Test Menu</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // If showing progress system demo (Task 8.4), render full screen
   if (showProgressSystemDemo) {
@@ -206,6 +223,18 @@ export const SwipeTestScreen: React.FC = () => {
           >
             <Text style={styles.progressSystemButtonText}>
               🔄 Test Progress System (Task 8.4)
+            </Text>
+          </TouchableOpacity>
+
+          {/* Test Undo Button Demo (Task 9.2) */}
+          <TouchableOpacity
+            style={styles.undoTestButton}
+            onPress={() => setShowUndoDemo(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Test Undo Button Functionality for Task 9.2"
+          >
+            <Text style={styles.undoTestButtonText}>
+              ↶ Test Undo Button (Task 9.2)
             </Text>
           </TouchableOpacity>
           
@@ -386,6 +415,26 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   progressSystemButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  undoTestButton: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  undoTestButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',

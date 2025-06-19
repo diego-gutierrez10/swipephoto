@@ -6,4 +6,5 @@
 
 export { UndoExample } from './UndoExample';
 export { UndoButton } from './UndoButton';
-export { AnimatedUndoButton } from './AnimatedUndoButton'; 
+export { AnimatedUndoButton } from './AnimatedUndoButton';
+export { EnhancedUndoButton } from './EnhancedUndoButton'; 
