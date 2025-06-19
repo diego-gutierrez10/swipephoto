@@ -56,9 +56,15 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
     setSwipeProgress(0);
     setSwipeDirection(null);
 
+    // Move to next photo and notify parent
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < photos.length && onPhotoChange) {
+      onPhotoChange(nextIndex);
+    }
+
     // Call parent callback
     onSwipeComplete(direction);
-  }, [onSwipeComplete]);
+  }, [onSwipeComplete, onPhotoChange, currentIndex, photos.length]);
 
   const handleSwipeProgress = useCallback((progress: number, direction: SwipeDirection | null) => {
     setSwipeProgress(progress);
