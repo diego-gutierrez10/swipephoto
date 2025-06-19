@@ -17,4 +17,5 @@ export type { PhotoNavigationOptions, PhotoNavigationReturn } from './usePhotoNa
 
 // Undo functionality
 export { useUndo } from './useUndo';
+export { useUndoVisualFeedback } from './useUndoVisualFeedback';
 export { useButtonAnimation } from './useButtonAnimation'; 

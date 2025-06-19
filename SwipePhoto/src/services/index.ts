@@ -16,6 +16,7 @@ export * from './PerformanceTestingService';
 
 // User interaction services
 export * from './HapticFeedbackService';
+export * from './AudioFeedbackService';
 
 // Progress management services
 export { ProgressManager } from './ProgressManager';

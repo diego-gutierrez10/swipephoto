@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedUndoButton } from '../components/undo/AnimatedUndoButton';
 import { EnhancedUndoButton } from '../components/undo/EnhancedUndoButton';
+import UndoVisualFeedback from '../components/undo/UndoVisualFeedback';
 import { useUndo } from '../hooks/useUndo';
 
 interface DemoPhoto {
@@ -46,7 +47,8 @@ export const UndoButtonDemoScreen: React.FC = () => {
     undo, 
     clearAll,
     stackInfo,
-    lastAction 
+    lastAction,
+    visualFeedback
   } = useUndo();
 
   const currentPhoto = photos[currentIndex];
@@ -78,8 +80,8 @@ export const UndoButtonDemoScreen: React.FC = () => {
   }, [currentPhoto, currentIndex, recordSwipe, photos.length]);
 
   // Handle undo from button
-  const handleUndoAction = useCallback(() => {
-    const undoneAction = undo();
+  const handleUndoAction = useCallback(async () => {
+    const undoneAction = await undo();
     
     if (undoneAction) {
       // Revert photo status
@@ -252,6 +254,17 @@ export const UndoButtonDemoScreen: React.FC = () => {
           respectReduceMotion: true,
         }}
         testID="demo-enhanced-undo-button"
+      />
+
+      {/* Visual Feedback Component */}
+      <UndoVisualFeedback
+        visible={visualFeedback.isVisible}
+        type={visualFeedback.feedbackState.type}
+        restoredItem={visualFeedback.feedbackState.restoredItem}
+        animationOrigin={visualFeedback.feedbackState.animationOrigin}
+        onComplete={visualFeedback.hideFeedback}
+        enableSound={visualFeedback.config.enableSound}
+        reducedMotion={visualFeedback.config.respectReducedMotion}
       />
     </SafeAreaView>
   );

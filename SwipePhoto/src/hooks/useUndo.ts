@@ -13,6 +13,7 @@ import {
   clearUndoStack,
 } from '../store/slices/undoSlice';
 import { undoSwipeAction } from '../store/thunks/undoThunks';
+import { useUndoVisualFeedback } from './useUndoVisualFeedback';
 import {
   selectCanUndo,
   selectUndoCount,
@@ -26,6 +27,13 @@ import type { RecordSwipeActionPayload } from '../types/undo';
  */
 export const useUndo = () => {
   const dispatch = useAppDispatch();
+  
+  // Visual feedback hook
+  const visualFeedback = useUndoVisualFeedback({
+    enableSound: true,
+    respectReducedMotion: false,
+    debug: __DEV__,
+  });
   
   // Selectors
   const canUndo = useAppSelector(selectCanUndo);
@@ -42,6 +50,16 @@ export const useUndo = () => {
     if (canUndo) {
       try {
         const result = await dispatch(undoSwipeAction({ enableHaptics: true })).unwrap();
+        
+        // Show visual feedback for the undone action
+        if (result.undoneAction) {
+          visualFeedback.showActionUndone({
+            id: result.undoneAction.photoId,
+            name: `Photo ${result.undoneAction.photoId}`,
+            type: 'photo',
+          });
+        }
+        
         return result.undoneAction; // Return the action that was undone
       } catch (error) {
         if (__DEV__) {
@@ -51,11 +69,14 @@ export const useUndo = () => {
       }
     }
     return null;
-  }, [dispatch, canUndo]);
+  }, [dispatch, canUndo, visualFeedback]);
 
   const clearAll = useCallback(() => {
     dispatch(clearUndoStack());
-  }, [dispatch]);
+    
+    // Show visual feedback for stack being cleared
+    visualFeedback.showStackCleared();
+  }, [dispatch, visualFeedback]);
 
   // Helper function to record a swipe action with minimal parameters
   const recordSwipe = useCallback((
@@ -96,6 +117,9 @@ export const useUndo = () => {
     recordSwipe,
     undo,
     clearAll,
+    
+    // Visual feedback
+    visualFeedback,
     
     // Computed values
     hasActions: undoCount > 0,
