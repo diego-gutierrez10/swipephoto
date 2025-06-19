@@ -41,4 +41,15 @@ export type {
 
 export { PhotoLibraryError, PhotoLibraryException } from './photo';
 
-export * from './organization'; 
+export * from './organization';
+
+// Undo exports
+export type {
+  UndoableSwipeAction,
+  UndoState,
+  RecordSwipeActionPayload,
+  UndoResult,
+  UndoConfig,
+} from './undo';
+
+export { DEFAULT_UNDO_CONFIG } from './undo'; 

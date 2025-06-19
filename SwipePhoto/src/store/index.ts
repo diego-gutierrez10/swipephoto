@@ -6,6 +6,7 @@ import photoSlice from './slices/photoSlice';
 import categorySlice from './slices/categorySlice';
 import organizationReducer from './slices/organizationSlice';
 import progressReducer from './slices/progressSlice';
+import undoReducer from './slices/undoSlice';
 
 // Import middleware
 import { createEnhancedBatchMiddleware } from './middleware/simpleBatchMiddleware';
@@ -17,6 +18,7 @@ export const store = configureStore({
     categories: categorySlice,
     organization: organizationReducer,
     progress: progressReducer,
+    undo: undoReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

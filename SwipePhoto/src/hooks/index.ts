@@ -13,4 +13,7 @@ export type { PhotoTransitionOptions, PhotoTransitionReturn } from './usePhotoTr
 export type { UseCategoryProgressReturn } from './useCategoryProgress';
 
 export { default as usePhotoNavigation } from './usePhotoNavigation';
-export type { PhotoNavigationOptions, PhotoNavigationReturn } from './usePhotoNavigation'; 
+export type { PhotoNavigationOptions, PhotoNavigationReturn } from './usePhotoNavigation';
+
+// Undo functionality
+export { useUndo } from './useUndo'; 
