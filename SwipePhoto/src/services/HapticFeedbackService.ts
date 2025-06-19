@@ -55,6 +55,20 @@ export class HapticFeedbackService {
       console.warn('HapticFeedback: Failed to trigger delete feedback', error);
     }
   }
+
+  /**
+   * Trigger haptic feedback for UNDO action (distinctive pattern)
+   */
+  static async triggerUndoFeedback(): Promise<void> {
+    if (!this.isEnabled) return;
+    
+    try {
+      // Use heavy impact for undo to make it distinctive
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch (error) {
+      console.warn('HapticFeedback: Failed to trigger undo feedback', error);
+    }
+  }
   
   /**
    * Generic haptic feedback trigger based on action type

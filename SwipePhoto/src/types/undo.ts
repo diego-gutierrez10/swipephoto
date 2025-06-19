@@ -56,8 +56,10 @@ export interface RecordSwipeActionPayload {
  */
 export interface UndoResult {
   success: boolean;
-  action?: UndoableSwipeAction; // The action that was undone
-  error?: string; // Error message if undo failed
+  undoneAction?: UndoableSwipeAction; // The action that was undone
+  restoredState?: any; // The state that was restored
+  processingTime?: number; // Time taken to process the undo
+  error?: string | null; // Error message if undo failed
 }
 
 /**

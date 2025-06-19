@@ -12,6 +12,7 @@ import {
   undoLastAction,
   clearUndoStack,
 } from '../store/slices/undoSlice';
+import { undoSwipeAction } from '../store/thunks/undoThunks';
 import {
   selectCanUndo,
   selectUndoCount,
@@ -37,13 +38,20 @@ export const useUndo = () => {
     dispatch(recordSwipeAction(payload));
   }, [dispatch]);
 
-  const undo = useCallback(() => {
+  const undo = useCallback(async () => {
     if (canUndo) {
-      dispatch(undoLastAction());
-      return lastAction; // Return the action that was undone
+      try {
+        const result = await dispatch(undoSwipeAction({ enableHaptics: true })).unwrap();
+        return result.undoneAction; // Return the action that was undone
+      } catch (error) {
+        if (__DEV__) {
+          console.error('🔄 useUndo: Failed to undo action:', error);
+        }
+        return null;
+      }
     }
     return null;
-  }, [dispatch, canUndo, lastAction]);
+  }, [dispatch, canUndo]);
 
   const clearAll = useCallback(() => {
     dispatch(clearUndoStack());
