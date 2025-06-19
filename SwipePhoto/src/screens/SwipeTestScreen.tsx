@@ -11,12 +11,14 @@ import { SwipePhotoCard } from '../components/swipe/SwipePhotoCard';
 import MainSwipeCard from '../components/swipe/MainSwipeCard';
 import { MainSwipeScreen } from './MainSwipeScreen';
 import CategoryProgressDemoScreen from './CategoryProgressDemoScreen';
+import ProgressSystemDemoScreen from './ProgressSystemDemoScreen';
 
 export const SwipeTestScreen: React.FC = () => {
   const [showPhotoCard, setShowPhotoCard] = useState(false);
   const [showMainSwipe, setShowMainSwipe] = useState(false);
   const [showMainSwipeScreen, setShowMainSwipeScreen] = useState(false);
   const [showCategoryProgress, setShowCategoryProgress] = useState(false);
+  const [showProgressSystemDemo, setShowProgressSystemDemo] = useState(false);
 
   const handlePhotoDelete = () => {
     console.log('Photo deleted!');
@@ -38,6 +40,23 @@ export const SwipeTestScreen: React.FC = () => {
     console.log('Main Swipe Queue Complete!');
     // Could navigate to next screen or show completion message
   };
+
+  // If showing progress system demo (Task 8.4), render full screen
+  if (showProgressSystemDemo) {
+    return (
+      <View style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+          <TouchableOpacity 
+            style={[styles.backButton, { margin: 20 }]}
+            onPress={() => setShowProgressSystemDemo(false)}
+          >
+            <Text style={styles.backButtonText}>← Back to Test Menu</Text>
+          </TouchableOpacity>
+          <ProgressSystemDemoScreen />
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   // If showing category progress demo (Task 8.3), render full screen
   if (showCategoryProgress) {
@@ -175,6 +194,18 @@ export const SwipeTestScreen: React.FC = () => {
           >
             <Text style={styles.testButtonText}>
               📊 Test Category Progress (Task 8.3)
+            </Text>
+          </TouchableOpacity>
+
+          {/* Test Progress System Demo (Task 8.4) */}
+          <TouchableOpacity
+            style={styles.progressSystemButton}
+            onPress={() => setShowProgressSystemDemo(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Test Progress System with Real-time Updates for Task 8.4"
+          >
+            <Text style={styles.progressSystemButtonText}>
+              🔄 Test Progress System (Task 8.4)
             </Text>
           </TouchableOpacity>
           
@@ -336,6 +367,26 @@ const styles = StyleSheet.create({
   },
   layoutTestButtonText: {
     color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  progressSystemButton: {
+    backgroundColor: '#5856D6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#5856D6',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  progressSystemButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',

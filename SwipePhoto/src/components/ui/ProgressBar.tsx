@@ -42,13 +42,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => {
   const fillAnimation = useRef(new Animated.Value(0)).current;
   
-  // Calculate progress percentage
-  const percentage = total > 0 ? Math.min((current / total) * 100, 100) : 0;
+  // Calculate progress percentage and ensure it's safe for React Native Animated
+  const rawPercentage = total > 0 ? Math.min((current / total) * 100, 100) : 0;
+  const percentage = Math.round(rawPercentage * 100) / 100; // Round to 2 decimal places max
   
   // Animate progress bar fill
   useEffect(() => {
+    // Ensure the animated value is an integer or simple decimal to avoid precision issues
+    const safeAnimatedValue = Math.round(percentage * 10) / 10; // Round to 1 decimal place
+    
     Animated.timing(fillAnimation, {
-      toValue: percentage,
+      toValue: safeAnimatedValue,
       duration: 300, // 0.3s as specified in requirements
       useNativeDriver: false, // width animations require non-native driver
     }).start();
@@ -60,9 +64,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       case 'percentage':
         return `${Math.round(percentage)}%`;
       case 'fraction':
-        return `${current} of ${total}`;
+        return `${Math.round(current)} of ${total}`;
       case 'both':
-        return `${current} of ${total} (${Math.round(percentage)}%)`;
+        return `${Math.round(current)} of ${total} (${Math.round(percentage)}%)`;
       default:
         return `${Math.round(percentage)}%`;
     }
@@ -92,10 +96,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         accessibilityValue={{
           min: 0,
           max: total,
-          now: current,
+          now: Math.round(current),
         }}
         accessibilityLabel={
-          accessibilityLabel || `Progress: ${current} of ${total} completed`
+          accessibilityLabel || `Progress: ${Math.round(current)} of ${total} completed`
         }
         testID={testID}
       >

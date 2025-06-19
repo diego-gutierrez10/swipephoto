@@ -9,6 +9,7 @@ import progressReducer from './slices/progressSlice';
 
 // Import middleware
 import { createEnhancedBatchMiddleware } from './middleware/simpleBatchMiddleware';
+import { progressMiddleware } from './middleware/progressMiddleware';
 
 export const store = configureStore({
   reducer: {
@@ -40,7 +41,8 @@ export const store = configureStore({
         ignoredPaths: ['photos.currentPhoto.createdAt', 'categories.categories', 'organization.metadata.progress.estimatedTimeRemaining'],
       },
     }).concat(
-      createEnhancedBatchMiddleware()
+      createEnhancedBatchMiddleware(),
+      progressMiddleware as any
     ),
   devTools: __DEV__,
 });

@@ -5,4 +5,7 @@ export * from './PhotoDateUtils';
 export * from './PhotoSourceUtils';
 
 // Cross-category utilities
-export * from './CrossCategoryUtils'; 
+export * from './CrossCategoryUtils';
+
+// Animation utilities
+export * from './animations'; 

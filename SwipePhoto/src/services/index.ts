@@ -17,5 +17,8 @@ export * from './PerformanceTestingService';
 // User interaction services
 export * from './HapticFeedbackService';
 
+// Progress management services
+export { ProgressManager } from './ProgressManager';
+
 export { default as PhotoPermissionsService } from './PhotoPermissionsService';
 export { default as PhotoPreloadingService } from './PhotoPreloadingService'; 
