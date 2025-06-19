@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,11 @@ interface MainSwipeScreenProps {
 }
 
 export const MainSwipeScreen: React.FC<MainSwipeScreenProps> = ({ navigation }) => {
+  // State for tracking current photo index and swipe counts
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [keepCount, setKeepCount] = useState(0);
+  const [deleteCount, setDeleteCount] = useState(0);
+
   // Sample photos for the layout demonstration
   const samplePhotos = [
     {
@@ -39,10 +44,37 @@ export const MainSwipeScreen: React.FC<MainSwipeScreenProps> = ({ navigation }) 
 
   const handleSwipeComplete = (direction: 'left' | 'right') => {
     console.log(`🏗️ Task 7.4 Layout - Swiped ${direction}`);
+    
+    // Update counters based on swipe direction
+    if (direction === 'right') {
+      setKeepCount(prev => prev + 1);
+    } else if (direction === 'left') {
+      setDeleteCount(prev => prev + 1);
+    }
   };
 
   const handlePhotoChange = (newIndex: number) => {
     console.log(`📸 Task 7.4 Layout - Photo changed to index ${newIndex}`);
+    setCurrentIndex(newIndex);
+  };
+
+  const handleUndo = () => {
+    console.log('🔄 Undo last action');
+    // In a real implementation, this would revert the last swipe
+    // For now, just reset counters as a demonstration
+    if (keepCount > 0) {
+      setKeepCount(prev => prev - 1);
+    } else if (deleteCount > 0) {
+      setDeleteCount(prev => prev - 1);
+    }
+  };
+
+  const handleSkip = () => {
+    console.log('⏭️ Skip current photo');
+    // Move to next photo without counting as keep/delete
+    if (currentIndex < samplePhotos.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    }
   };
 
   return (
@@ -56,14 +88,21 @@ export const MainSwipeScreen: React.FC<MainSwipeScreenProps> = ({ navigation }) 
       <View style={styles.contentContainer}>
         <MainSwipeCard 
           photos={samplePhotos}
-          currentIndex={0}
+          currentIndex={currentIndex}
           onSwipeComplete={handleSwipeComplete}
           onPhotoChange={handlePhotoChange}
         />
       </View>
       
       {/* Footer - Discrete controls */}
-      <MainSwipeFooter />
+      <MainSwipeFooter 
+        keepCount={keepCount}
+        deleteCount={deleteCount}
+        totalPhotos={samplePhotos.length}
+        currentPhoto={currentIndex + 1} // +1 because UI shows 1-based indexing
+        onUndo={handleUndo}
+        onSkip={handleSkip}
+      />
     </SafeAreaView>
   );
 };
