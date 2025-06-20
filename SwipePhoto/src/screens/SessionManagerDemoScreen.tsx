@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSessionManager, useSessionLifecycle } from '../hooks';
 import { SessionState, SessionEvent } from '../types/session';
+import { SessionManager } from '../services/SessionManager';
 
 /**
  * Session info display component
@@ -260,6 +261,46 @@ const SessionControls: React.FC = () => {
     }
   }, [updateSession, state.currentSession]);
 
+  const handleResetSession = useCallback(async () => {
+    setLoading('reset');
+    try {      
+      // Reset the singleton and clean up
+      if (SessionManager.resetInstance) {
+        SessionManager.resetInstance();
+      }
+      
+      // Clear storage manually
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      
+      // Clear all session-related keys
+      const keysToRemove = [
+        '@SwipePhoto_session_state',
+        '@SwipePhoto_session_backup', 
+        '@SwipePhoto_session_metadata',
+        // Also clear legacy keys just in case
+        '@SwipePhoto:session_state',
+        '@SwipePhoto:session_backup',
+        '@SwipePhoto:session_metadata',
+      ];
+      
+      for (const key of keysToRemove) {
+        try {
+          await AsyncStorage.removeItem(key);
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+      
+      Alert.alert('Success', 'Session manager reset successfully. Please restart the demo to see changes.');
+      
+    } catch (error) {
+      console.error('Reset failed:', error);
+      Alert.alert('Error', `Reset failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(null);
+    }
+  }, []);
+
   return (
     <View style={styles.controlsContainer}>
       <Text style={styles.cardTitle}>Session Controls</Text>
@@ -303,6 +344,16 @@ const SessionControls: React.FC = () => {
           {loading === 'update' ? 'Updating...' : 'Simulate Photo Change'}
         </Text>
       </TouchableOpacity>
+      
+              <TouchableOpacity
+          style={[styles.button, styles.dangerButton]}
+          onPress={handleResetSession}
+          disabled={state.isRestoring || loading === 'reset'}
+        >
+          <Text style={styles.buttonText}>
+            {loading === 'reset' ? '⏳ Resetting...' : '🔄 Reset Session Manager'}
+          </Text>
+        </TouchableOpacity>
     </View>
   );
 };
@@ -370,8 +421,8 @@ const SessionEventsLog: React.FC = () => {
  * Main demo screen component
  */
 const SessionManagerDemoScreen: React.FC = () => {
-  const { state } = useSessionManager();
-  const lifecycle = useSessionLifecycle();
+      const { state } = useSessionManager();
+    const lifecycle = useSessionLifecycle();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -380,12 +431,12 @@ const SessionManagerDemoScreen: React.FC = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Session Manager Demo</Text>
         
-        {state.lastError && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>Error:</Text>
-            <Text style={styles.errorMessage}>{state.lastError}</Text>
-          </View>
-        )}
+                  {state.lastError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorTitle}>Error:</Text>
+              <Text style={styles.errorMessage}>{state.lastError}</Text>
+            </View>
+          )}
         
         {!lifecycle.isInitialized ? (
           <View style={styles.loadingContainer}>
@@ -577,6 +628,9 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  dangerButton: {
+    backgroundColor: '#F44336',
   },
 });
 
