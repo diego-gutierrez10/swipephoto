@@ -52,4 +52,25 @@ export type {
   UndoConfig,
 } from './undo';
 
-export { DEFAULT_UNDO_CONFIG } from './undo'; 
+export { DEFAULT_UNDO_CONFIG } from './undo';
+
+// Session management exports
+export type {
+  SessionState,
+  SessionNavigationState,
+  SessionProgressState,
+  SessionUserPreferences,
+  SessionUndoState,
+  ISessionStorageInterface,
+  SessionStorageConfig,
+  ISessionMigration,
+  SessionRecoveryResult,
+  ISessionCrashDetection,
+  SessionEvent,
+  SessionEventCallback,
+} from './session';
+
+export { 
+  createDefaultSessionState,
+  DEFAULT_SESSION_CONFIG,
+} from './session'; 

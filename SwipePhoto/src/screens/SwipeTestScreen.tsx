@@ -13,6 +13,7 @@ import { MainSwipeScreen } from './MainSwipeScreen';
 import CategoryProgressDemoScreen from './CategoryProgressDemoScreen';
 import ProgressSystemDemoScreen from './ProgressSystemDemoScreen';
 import { UndoButtonDemoScreen } from './UndoButtonDemoScreen';
+import SessionManagerDemoScreen from './SessionManagerDemoScreen';
 
 export const SwipeTestScreen: React.FC = () => {
   const [showPhotoCard, setShowPhotoCard] = useState(false);
@@ -21,6 +22,7 @@ export const SwipeTestScreen: React.FC = () => {
   const [showCategoryProgress, setShowCategoryProgress] = useState(false);
   const [showProgressSystemDemo, setShowProgressSystemDemo] = useState(false);
   const [showUndoDemo, setShowUndoDemo] = useState(false);
+  const [showSessionManager, setShowSessionManager] = useState(false);
 
   const handlePhotoDelete = () => {
     console.log('Photo deleted!');
@@ -42,6 +44,21 @@ export const SwipeTestScreen: React.FC = () => {
     console.log('Main Swipe Queue Complete!');
     // Could navigate to next screen or show completion message
   };
+
+  // If showing session manager demo (Task 10.3), render full screen
+  if (showSessionManager) {
+    return (
+      <View style={{ flex: 1 }}>
+        <SessionManagerDemoScreen />
+        <TouchableOpacity 
+          style={[styles.backButton, { position: 'absolute', top: 60, left: 20, zIndex: 1001 }]}
+          onPress={() => setShowSessionManager(false)}
+        >
+          <Text style={styles.backButtonText}>← Back to Test Menu</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // If showing undo demo (Task 9.2), render full screen
   if (showUndoDemo) {
@@ -235,6 +252,18 @@ export const SwipeTestScreen: React.FC = () => {
           >
             <Text style={styles.undoTestButtonText}>
               ↶ Test Undo Button (Task 9.2)
+            </Text>
+          </TouchableOpacity>
+
+          {/* Test Session Manager Demo (Task 10.3) */}
+          <TouchableOpacity
+            style={styles.sessionManagerButton}
+            onPress={() => setShowSessionManager(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Test Session Manager and Pause/Resume Functionality for Task 10.3"
+          >
+            <Text style={styles.sessionManagerButtonText}>
+              💾 Test Session Manager (Task 10.3)
             </Text>
           </TouchableOpacity>
           
@@ -436,6 +465,26 @@ const styles = StyleSheet.create({
   },
   undoTestButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  sessionManagerButton: {
+    backgroundColor: '#32D74B',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#32D74B',
+    shadowColor: '#32D74B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  sessionManagerButtonText: {
+    color: '#000000',
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
