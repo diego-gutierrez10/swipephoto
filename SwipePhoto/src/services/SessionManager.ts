@@ -5,14 +5,15 @@
  * Handles pause/resume functionality with app state detection.
  */
 
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import { 
   SessionState, 
   SessionLifecycleState, 
   SessionRestorationInfo,
   SessionEvent,
   SessionEventCallback,
-  createDefaultSessionState 
+  createDefaultSessionState,
+  DEFAULT_SESSION_CONFIG
 } from '../types/session';
 import { SessionStorageService } from './SessionStorageService';
 import { CategoryMemoryManager } from './CategoryMemoryManager';
@@ -108,8 +109,12 @@ export class SessionManager {
 
   private constructor(config: Partial<SessionManagerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.sessionStorage = new SessionStorageService();
+    // Pass storage config to SessionStorageService to ensure proper key format
+    this.sessionStorage = new SessionStorageService(DEFAULT_SESSION_CONFIG);
     this.categoryMemoryManager = new CategoryMemoryManager(this.sessionStorage);
+    
+    // Clean up old storage keys on first initialization
+    this.cleanupLegacyStorage();
   }
 
   /**
@@ -119,7 +124,18 @@ export class SessionManager {
     if (!SessionManager.instance) {
       SessionManager.instance = new SessionManager(config);
     }
+    // Note: config is only applied on first initialization to maintain singleton pattern
     return SessionManager.instance;
+  }
+
+  /**
+   * Reset singleton instance (for testing/debugging)
+   */
+  public static resetInstance(): void {
+    if (SessionManager.instance) {
+      SessionManager.instance.dispose();
+      SessionManager.instance = null;
+    }
   }
 
   /**
@@ -658,6 +674,41 @@ export class SessionManager {
       } else {
         console.log(message);
       }
+    }
+  }
+
+  /**
+   * Clean up legacy storage keys with invalid characters
+   */
+  private async cleanupLegacyStorage(): Promise<void> {
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const SecureStore = await import('expo-secure-store');
+      
+      // Old keys that contained colons
+      const legacyKeys = [
+        '@SwipePhoto:session_state',
+        '@SwipePhoto:session_backup',
+        '@SwipePhoto:session_metadata',
+      ];
+      
+      // Remove from both storage types
+      for (const key of legacyKeys) {
+        try {
+          await AsyncStorage.removeItem(key);
+          if (Platform.OS !== 'web') {
+            await SecureStore.deleteItemAsync(key);
+          }
+        } catch (error) {
+          // Ignore errors - key probably doesn't exist
+        }
+      }
+      
+      if (__DEV__) {
+        console.log('🧹 SessionManager: Legacy storage keys cleaned up');
+      }
+    } catch (error) {
+      console.warn('SessionManager: Failed to cleanup legacy storage:', error);
     }
   }
 } 
