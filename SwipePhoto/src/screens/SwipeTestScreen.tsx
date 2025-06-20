@@ -14,6 +14,7 @@ import CategoryProgressDemoScreen from './CategoryProgressDemoScreen';
 import ProgressSystemDemoScreen from './ProgressSystemDemoScreen';
 import { UndoButtonDemoScreen } from './UndoButtonDemoScreen';
 import SessionManagerDemoScreen from './SessionManagerDemoScreen';
+import ProgressTrackerDemoScreen from './ProgressTrackerDemoScreen';
 
 export const SwipeTestScreen: React.FC = () => {
   const [showPhotoCard, setShowPhotoCard] = useState(false);
@@ -23,6 +24,7 @@ export const SwipeTestScreen: React.FC = () => {
   const [showProgressSystemDemo, setShowProgressSystemDemo] = useState(false);
   const [showUndoDemo, setShowUndoDemo] = useState(false);
   const [showSessionManager, setShowSessionManager] = useState(false);
+  const [showProgressTracker, setShowProgressTracker] = useState(false);
 
   const handlePhotoDelete = () => {
     console.log('Photo deleted!');
@@ -44,6 +46,21 @@ export const SwipeTestScreen: React.FC = () => {
     console.log('Main Swipe Queue Complete!');
     // Could navigate to next screen or show completion message
   };
+
+  // If showing progress tracker demo (Task 10.4), render full screen
+  if (showProgressTracker) {
+    return (
+      <View style={{ flex: 1 }}>
+        <ProgressTrackerDemoScreen />
+        <TouchableOpacity 
+          style={[styles.backButton, { position: 'absolute', top: 60, left: 20, zIndex: 1001 }]}
+          onPress={() => setShowProgressTracker(false)}
+        >
+          <Text style={styles.backButtonText}>← Back to Test Menu</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // If showing session manager demo (Task 10.3), render full screen
   if (showSessionManager) {
@@ -266,6 +283,18 @@ export const SwipeTestScreen: React.FC = () => {
               💾 Test Session Manager (Task 10.3)
             </Text>
           </TouchableOpacity>
+
+          {/* Test Progress Tracker Demo (Task 10.4) */}
+          <TouchableOpacity
+            style={styles.progressTrackerButton}
+            onPress={() => setShowProgressTracker(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Test Progress Tracker and Background Saving for Task 10.4"
+          >
+            <Text style={styles.progressTrackerButtonText}>
+              🔄 Test Progress Tracker (Task 10.4)
+            </Text>
+          </TouchableOpacity>
           
           {/* Conditional Card Display */}
           {showPhotoCard ? (
@@ -484,6 +513,26 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   sessionManagerButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  progressTrackerButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#34C759',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  progressTrackerButtonText: {
     color: '#000000',
     fontSize: 16,
     fontWeight: '700',

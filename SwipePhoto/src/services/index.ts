@@ -20,6 +20,7 @@ export * from './AudioFeedbackService';
 
 // Progress management services
 export { ProgressManager } from './ProgressManager';
+export { ProgressTracker, type ProgressTrackerConfig, type ProgressChange, type BackgroundSaveTask, type ProgressTrackerEvent, type ProgressTrackerEventCallback } from './ProgressTracker';
 
 // Session management services
 export * from './SessionStorageService';

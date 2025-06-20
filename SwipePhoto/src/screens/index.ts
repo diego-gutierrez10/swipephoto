@@ -4,4 +4,5 @@ export { default as SwipeTestScreen } from './SwipeTestScreen';
 export { UndoButtonDemoScreen } from './UndoButtonDemoScreen';
 export { default as SessionManagerDemoScreen } from './SessionManagerDemoScreen';
 export { default as CategoryProgressDemoScreen } from './CategoryProgressDemoScreen';
-export { default as ProgressSystemDemoScreen } from './ProgressSystemDemoScreen'; 
+export { default as ProgressSystemDemoScreen } from './ProgressSystemDemoScreen';
+export { default as ProgressTrackerDemoScreen } from './ProgressTrackerDemoScreen'; 
