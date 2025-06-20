@@ -5,7 +5,7 @@
  * Provides easy integration with SessionManager functionality.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { 
   SessionManager, 
   SessionManagerConfig, 
@@ -101,7 +101,8 @@ const DEFAULT_HOOK_CONFIG: Required<UseSessionManagerConfig> = {
 export const useSessionManager = (
   config: UseSessionManagerConfig = {}
 ): UseSessionManagerReturn => {
-  const fullConfig = { ...DEFAULT_HOOK_CONFIG, ...config };
+  // Memoize config to prevent recreating SessionManager instance
+  const fullConfig = useMemo(() => ({ ...DEFAULT_HOOK_CONFIG, ...config }), [config]);
   
   // Session manager instance
   const sessionManagerRef = useRef<SessionManager | null>(null);
@@ -133,7 +134,7 @@ export const useSessionManager = (
       sessionManagerRef.current = SessionManager.getInstance(fullConfig);
     }
     return sessionManagerRef.current;
-  }, [fullConfig]);
+  }, []);
 
   // Update state from session
   const updateStateFromSession = useCallback(() => {

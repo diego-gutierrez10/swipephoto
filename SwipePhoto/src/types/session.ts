@@ -369,9 +369,9 @@ export const createDefaultSessionState = (sessionId: string): SessionState => ({
  * Default storage configuration
  */
 export const DEFAULT_SESSION_CONFIG: SessionStorageConfig = {
-  sessionKey: '@SwipePhoto:session_state',
-  backupKey: '@SwipePhoto:session_backup',
-  metadataKey: '@SwipePhoto:session_metadata',
+  sessionKey: '@SwipePhoto_session_state',
+  backupKey: '@SwipePhoto_session_backup',
+  metadataKey: '@SwipePhoto_session_metadata',
   
   enableEncryption: true,
   
