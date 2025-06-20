@@ -4,7 +4,7 @@
  * React hook for managing progress tracking and auto-save functionality
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { 
   ProgressTracker, 
   ProgressTrackerConfig, 
@@ -77,10 +77,15 @@ const DEFAULT_HOOK_CONFIG: UseProgressTrackerConfig = {
 export const useProgressTracker = (
   config: UseProgressTrackerConfig = {}
 ): UseProgressTrackerReturn => {
-  const fullConfig = { ...DEFAULT_HOOK_CONFIG, ...config };
+  // Memoize the config to prevent infinite re-renders
+  const fullConfig = useMemo(() => ({ ...DEFAULT_HOOK_CONFIG, ...config }), [config]);
   
   // Progress tracker instance
   const progressTrackerRef = useRef<ProgressTracker | null>(null);
+  
+  // Config ref to access current config in callbacks
+  const configRef = useRef(fullConfig);
+  configRef.current = fullConfig;
   
   // Hook state
   const [state, setState] = useState<UseProgressTrackerState>({
@@ -105,7 +110,7 @@ export const useProgressTracker = (
 
   // Event tracking
   const addEvent = useCallback((event: ProgressTrackerEvent, data?: any) => {
-    if (!fullConfig.enableEventTracking) return;
+    if (!configRef.current.enableEventTracking) return;
     
     setState(prev => ({
       ...prev,
@@ -114,7 +119,7 @@ export const useProgressTracker = (
         { event, data, timestamp: Date.now() }
       ]
     }));
-  }, [fullConfig.enableEventTracking]);
+  }, []); // Use configRef to access current config without dependency
 
   const clearEvents = useCallback(() => {
     setState(prev => ({ ...prev, events: [] }));
@@ -123,10 +128,10 @@ export const useProgressTracker = (
   // Get progress tracker instance
   const getProgressTracker = useCallback(() => {
     if (!progressTrackerRef.current) {
-      progressTrackerRef.current = ProgressTracker.getInstance(fullConfig);
+      progressTrackerRef.current = ProgressTracker.getInstance(configRef.current);
     }
     return progressTrackerRef.current;
-  }, [fullConfig]);
+  }, []); // Use configRef to access current config without dependency
 
   // Update state from tracker stats
   const updateStateFromTracker = useCallback(() => {
@@ -141,7 +146,7 @@ export const useProgressTracker = (
       currentAppState: stats.currentAppState,
       backgroundTaskActive: stats.backgroundTaskActive,
     }));
-  }, [getProgressTracker]);
+  }, []); // Remove getProgressTracker dependency
 
   // Core operations
   const initialize = useCallback(async (sessionManager?: SessionManager): Promise<void> => {
@@ -159,7 +164,7 @@ export const useProgressTracker = (
       setError(errorMessage);
       throw error;
     }
-  }, [getProgressTracker, updateStateFromTracker, clearError, setError]);
+  }, []); // Remove all dependencies to prevent infinite loop
 
   const trackChange = useCallback((
     key: string, 
@@ -178,7 +183,7 @@ export const useProgressTracker = (
       const errorMessage = error instanceof Error ? error.message : 'Failed to track change';
       setError(errorMessage);
     }
-  }, [getProgressTracker, updateStateFromTracker, clearError, setError]);
+  }, []); // Remove all dependencies to prevent infinite loop
 
   const saveProgress = useCallback(async (forceSave = false): Promise<void> => {
     try {
@@ -194,7 +199,7 @@ export const useProgressTracker = (
       setError(errorMessage);
       throw error;
     }
-  }, [getProgressTracker, updateStateFromTracker, clearError, setError]);
+  }, []); // Remove all dependencies to prevent infinite loop
 
   // Event management
   const addEventListener = useCallback((
@@ -203,7 +208,7 @@ export const useProgressTracker = (
   ): void => {
     const tracker = getProgressTracker();
     tracker.addEventListener(event, callback);
-  }, [getProgressTracker]);
+  }, []); // Remove getProgressTracker dependency
 
   const removeEventListener = useCallback((
     event: ProgressTrackerEvent, 
@@ -211,17 +216,17 @@ export const useProgressTracker = (
   ): void => {
     const tracker = getProgressTracker();
     tracker.removeEventListener(event, callback);
-  }, [getProgressTracker]);
+  }, []); // Remove getProgressTracker dependency
 
   // Get current stats
   const getStats = useCallback((): UseProgressTrackerState => {
     updateStateFromTracker();
     return state;
-  }, [updateStateFromTracker, state]);
+  }, []); // Remove dependencies that cause infinite loop
 
   // Set up event listeners for state tracking
   useEffect(() => {
-    if (!fullConfig.enableEventTracking) return;
+    if (!configRef.current.enableEventTracking) return;
 
     const tracker = getProgressTracker();
 
@@ -252,11 +257,11 @@ export const useProgressTracker = (
         tracker.removeEventListener(event, handleEvent);
       });
     };
-  }, [fullConfig.enableEventTracking, getProgressTracker, addEvent, updateStateFromTracker]);
+  }, []); // Use configRef to access current config without dependency
 
   // Auto-initialize if enabled
   useEffect(() => {
-    if (!fullConfig.autoInitialize) return;
+    if (!configRef.current.autoInitialize) return;
 
     let mounted = true;
 
@@ -275,7 +280,7 @@ export const useProgressTracker = (
     return () => {
       mounted = false;
     };
-  }, [fullConfig.autoInitialize, initialize]);
+  }, []); // Use configRef to access current config without dependency
 
   // Cleanup on unmount
   useEffect(() => {
