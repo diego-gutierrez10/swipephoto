@@ -18,6 +18,7 @@ import {
 const initialState: UndoState = {
   undoStack: [],
   maxUndoActions: DEFAULT_UNDO_CONFIG.maxActions, // 3 actions max
+  lastUndoneAction: null,
 };
 
 /**
@@ -31,6 +32,9 @@ const undoSlice = createSlice({
      * Record a new swipe action that can be undone
      */
     recordSwipeAction: (state, action: PayloadAction<RecordSwipeActionPayload>) => {
+      // Clear last undone action on new swipe
+      state.lastUndoneAction = null;
+      
       const { photoId, direction, previousIndex, categoryId, metadata } = action.payload;
       
       // Create undoable action
@@ -77,8 +81,10 @@ const undoSlice = createSlice({
         return;
       }
 
-      // Remove the most recent action from the stack
-      const undoneAction = state.undoStack.pop();
+      // Store the action to be undone and then remove it
+      const undoneAction = state.undoStack[state.undoStack.length - 1];
+      state.lastUndoneAction = undoneAction;
+      state.undoStack.pop();
 
       if (__DEV__ && undoneAction) {
         console.log('🔄 Undo: Undoing action', {

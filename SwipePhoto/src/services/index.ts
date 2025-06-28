@@ -27,6 +27,7 @@ export * from './SessionStorageService';
 export * from './SessionMigrationService';
 export { CategoryMemoryManager, type ICategoryMemoryManager, type CategoryProgress, type NavigationStateUpdate } from './CategoryMemoryManager';
 export { SessionManager, type SessionManagerConfig, type SessionValidationResult, type ProgressiveResource } from './SessionManager';
+export { SessionRecoveryManager, type CrashDetectionResult, type RecoveryUIOptions, type RecoveryOption, type SessionSnapshot, type RecoveryTelemetry } from './SessionRecoveryManager';
 
 export { default as PhotoPermissionsService } from './PhotoPermissionsService';
 export { default as PhotoPreloadingService } from './PhotoPreloadingService'; 

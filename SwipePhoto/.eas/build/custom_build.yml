@@ -1,0 +1,8 @@
+build:
+  name: "Custom Build with legacy-peer-deps"
+  steps:
+    - eas/checkout
+    - run:
+        name: "Install dependencies with legacy-peer-deps"
+        command: "npm install --legacy-peer-deps"
+    - eas/build 

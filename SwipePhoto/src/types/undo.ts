@@ -34,6 +34,7 @@ export interface UndoableSwipeAction {
 export interface UndoState {
   undoStack: UndoableSwipeAction[]; // Stack of actions that can be undone
   maxUndoActions: number; // Maximum number of actions to keep (3)
+  lastUndoneAction?: UndoableSwipeAction | null; // The last action that was undone
 }
 
 /**

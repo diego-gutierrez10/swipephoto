@@ -1,8 +1,11 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, current } from '@reduxjs/toolkit';
 import type { Photo, PhotoMetadata, PhotoSortOrder } from '../../types';
 
 export interface PhotoState {
-  photos: Photo[];
+  photos: {
+    byId: { [id: string]: Photo };
+    allIds: string[];
+  };
   currentPhoto: Photo | null;
   metadata: PhotoMetadata;
   loading: boolean;
@@ -20,7 +23,10 @@ export interface PhotoState {
 }
 
 const initialState: PhotoState = {
-  photos: [],
+  photos: {
+    byId: {},
+    allIds: [],
+  },
   currentPhoto: null,
   metadata: {
     totalCount: 0,
@@ -100,6 +106,36 @@ const photoSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setPhotos: (state, action: PayloadAction<Photo[]>) => {
+      const photos = action.payload;
+      state.photos.byId = photos.reduce((map, photo) => {
+        map[photo.id] = photo;
+        return map;
+      }, {} as { [id: string]: Photo });
+      state.photos.allIds = photos.map(photo => photo.id);
+      
+      // Update metadata
+      state.metadata.totalCount = photos.length;
+      state.metadata.categorizedCount = photos.filter(
+        (photo: Photo) => photo.categoryIds.length > 0
+      ).length;
+      state.metadata.uncategorizedCount =
+        state.metadata.totalCount - state.metadata.categorizedCount;
+      state.metadata.favoriteCount = photos.filter(
+        (photo: Photo) => photo.isFavorite
+      ).length;
+      state.metadata.totalSize = photos.reduce(
+        (total: number, photo: Photo) => total + photo.size,
+        0
+      );
+    },
+    removePhotosByIds: (state, action: PayloadAction<string[]>) => {
+      const idsToRemove = new Set(action.payload);
+      state.photos.allIds = state.photos.allIds.filter((id) => !idsToRemove.has(id));
+      idsToRemove.forEach(id => {
+        delete state.photos.byId[id];
+      });
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -110,18 +146,24 @@ const photoSlice = createSlice({
       })
       .addCase(loadPhotos.fulfilled, (state, action) => {
         state.loading = false;
-        state.photos = action.payload;
+        const photos = action.payload;
+        state.photos.byId = photos.reduce((map, photo) => {
+            map[photo.id] = photo;
+            return map;
+        }, {} as { [id: string]: Photo });
+        state.photos.allIds = photos.map(photo => photo.id);
+
         // Update metadata
-        state.metadata.totalCount = action.payload.length;
-        state.metadata.categorizedCount = action.payload.filter(
+        state.metadata.totalCount = photos.length;
+        state.metadata.categorizedCount = photos.filter(
           (photo: Photo) => photo.categoryIds.length > 0
         ).length;
         state.metadata.uncategorizedCount =
           state.metadata.totalCount - state.metadata.categorizedCount;
-        state.metadata.favoriteCount = action.payload.filter(
+        state.metadata.favoriteCount = photos.filter(
           (photo: Photo) => photo.isFavorite
         ).length;
-        state.metadata.totalSize = action.payload.reduce(
+        state.metadata.totalSize = photos.reduce(
           (total: number, photo: Photo) => total + photo.size,
           0
         );
@@ -133,7 +175,7 @@ const photoSlice = createSlice({
       // Categorize photo
       .addCase(categorizePhoto.fulfilled, (state, action) => {
         const { photoId, categoryIds } = action.payload;
-        const photo = state.photos.find((p: Photo) => p.id === photoId);
+        const photo = state.photos.byId[photoId];
         if (photo) {
           photo.categoryIds = categoryIds;
         }
@@ -141,7 +183,7 @@ const photoSlice = createSlice({
       // Toggle favorite
       .addCase(togglePhotoFavorite.fulfilled, (state, action) => {
         const photoId = action.payload;
-        const photo = state.photos.find((p: Photo) => p.id === photoId);
+        const photo = state.photos.byId[photoId];
         if (photo) {
           photo.isFavorite = !photo.isFavorite;
         }
@@ -155,6 +197,8 @@ export const {
   setFilters,
   clearFilters,
   clearError,
+  setPhotos,
+  removePhotosByIds,
 } = photoSlice.actions;
 
 export default photoSlice.reducer; 

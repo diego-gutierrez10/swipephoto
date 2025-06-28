@@ -274,10 +274,13 @@ const SessionControls: React.FC = () => {
       
       // Clear all session-related keys
       const keysToRemove = [
+        'SwipePhoto_session_state',
+        'SwipePhoto_session_backup', 
+        'SwipePhoto_session_metadata',
+        // Also clear legacy keys just in case
         '@SwipePhoto_session_state',
         '@SwipePhoto_session_backup', 
         '@SwipePhoto_session_metadata',
-        // Also clear legacy keys just in case
         '@SwipePhoto:session_state',
         '@SwipePhoto:session_backup',
         '@SwipePhoto:session_metadata',

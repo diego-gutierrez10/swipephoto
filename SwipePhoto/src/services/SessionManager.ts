@@ -17,6 +17,9 @@ import {
 } from '../types/session';
 import { SessionStorageService } from './SessionStorageService';
 import { CategoryMemoryManager } from './CategoryMemoryManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PREMIUM_KEY = '@SwipePhoto:isPremium';
 
 /**
  * Session validation result
@@ -88,7 +91,7 @@ export class SessionManager {
   
   private config: SessionManagerConfig;
   private sessionStorage: SessionStorageService;
-  private categoryMemoryManager: CategoryMemoryManager;
+  public categoryMemoryManager: CategoryMemoryManager;
   
   // Current session state
   private currentSession: SessionState | null = null;
@@ -141,34 +144,37 @@ export class SessionManager {
   /**
    * Initialize the session manager
    */
-  public async initialize(): Promise<void> {
-    if (this.isInitialized) return;
+  public async initialize(): Promise<{ recoveryNeeded: boolean }> {
+    if (this.isInitialized) return { recoveryNeeded: false };
 
     try {
       this.log('🔄 SessionManager: Initializing...');
 
-      // Set up app state listener
       this.setupAppStateListener();
 
-      // Try to restore previous session
+      const storedSession = await this.sessionStorage.load();
+      if (!storedSession || !this.validateSession(storedSession).canRestore) {
+        this.log('❌ Session needs recovery or is invalid.');
+        this.isInitialized = true; // Mark as initialized to prevent re-entry
+        return { recoveryNeeded: true };
+      }
+      
       await this.attemptSessionRestore();
+      await this.checkAndResetDailyCount();
+      await this.loadPremiumStatus();
 
-      // Start auto-save if enabled
       if (this.config.autoSaveEnabled) {
         this.startAutoSave();
       }
 
       this.isInitialized = true;
       this.emitEvent('session_started', { restored: this.currentSession?.restoration.wasRestored });
-
       this.log('✅ SessionManager: Initialized successfully');
+      return { recoveryNeeded: false };
 
     } catch (error) {
       console.error('SessionManager: Initialization failed:', error);
-      
-      // Create a new session as fallback
-      await this.createNewSession();
-      this.isInitialized = true;
+      return { recoveryNeeded: true };
     }
   }
 
@@ -197,11 +203,76 @@ export class SessionManager {
     this.log('📝 SessionManager: Session updated', {
       sessionId: this.currentSession.sessionId,
       updates: Object.keys(updates),
+      newPhotoCount: this.currentSession.dailyPhotoCount,
     });
 
     // Auto-save if enabled
     if (this.config.autoSaveEnabled) {
       await this.saveSession();
+    }
+  }
+
+  /**
+   * Increment the daily photo count directly in storage for robustness.
+   */
+  public async incrementPhotoCount(): Promise<void> {
+    try {
+      // Load the most recent session state directly from storage to avoid in-memory sync issues
+      const session = this.currentSession ?? (await this.sessionStorage.load());
+
+      if (!session) {
+        this.log('Cannot increment photo count, no session found.');
+        return;
+      }
+
+      // Increment the count
+      const newCount = (session.dailyPhotoCount || 0) + 1;
+      session.dailyPhotoCount = newCount;
+      
+      // Also update the in-memory state to be consistent
+      this.currentSession = session;
+
+      // Save back to storage immediately to guarantee persistence
+      await this.saveSession();
+      this.log(`Photo count incremented. New count: ${newCount}`);
+
+    } catch (error) {
+      console.error('Failed to robustly increment photo count', error);
+    }
+  }
+
+  /**
+   * Get the current daily usage from the in-memory state
+   */
+  public getDailyUsage(): { count: number; limit: number } {
+    const count = this.currentSession?.dailyPhotoCount ?? 0;
+    const isPremium = this.isPremium();
+    const limit = isPremium ? Infinity : 50; // 50 swipes for free users
+    
+    this.log(`Getting daily usage. In-memory count: ${count}, Limit: ${limit}, Premium: ${isPremium}`);
+    return { count, limit };
+  }
+
+  /**
+   * Checks if the user has a premium status.
+   */
+  public isPremium(): boolean {
+    return this.currentSession?.isPremium ?? false;
+  }
+
+  /**
+   * Sets the user's premium status and saves it.
+   */
+  public async setPremiumStatus(isPremium: boolean): Promise<void> {
+    try {
+      if (this.currentSession) {
+        this.currentSession.isPremium = isPremium;
+      }
+      await AsyncStorage.setItem(PREMIUM_KEY, JSON.stringify(isPremium));
+      await this.saveSession(); // Persist the change in the main session object as well
+      this.log(`Premium status set to: ${isPremium}`);
+    } catch (error) {
+      console.error('Failed to set premium status:', error);
     }
   }
 
@@ -313,6 +384,9 @@ export class SessionManager {
         totalPauseTime,
       });
 
+      // Check for daily limit reset
+      await this.checkAndResetDailyCount();
+
     } catch (error) {
       console.error('SessionManager: Failed to resume session:', error);
       this.emitEvent('session_recovery_failed', { error });
@@ -333,6 +407,7 @@ export class SessionManager {
     }
 
     try {
+      this.log(`💾 Saving session... Current photo count: ${this.currentSession.dailyPhotoCount}`);
       await this.sessionStorage.save(this.currentSession);
       this.log('💾 SessionManager: Session saved');
     } catch (error) {
@@ -565,12 +640,9 @@ export class SessionManager {
    */
   private async createNewSession(): Promise<void> {
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
     this.currentSession = createDefaultSessionState(sessionId);
-    
-    this.log('📝 SessionManager: Created new session', { sessionId });
-    
-    // Save immediately
+    await this.loadPremiumStatus();
+    this.log('✨ SessionManager: New session created', { sessionId });
     await this.saveSession();
   }
 
@@ -685,11 +757,14 @@ export class SessionManager {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const SecureStore = await import('expo-secure-store');
       
-      // Old keys that contained colons
+      // Old keys that contained invalid characters for SecureStore
       const legacyKeys = [
         '@SwipePhoto:session_state',
         '@SwipePhoto:session_backup',
         '@SwipePhoto:session_metadata',
+        '@SwipePhoto_session_state',
+        '@SwipePhoto_session_backup',
+        '@SwipePhoto_session_metadata',
       ];
       
       // Remove from both storage types
@@ -710,5 +785,51 @@ export class SessionManager {
     } catch (error) {
       console.warn('SessionManager: Failed to cleanup legacy storage:', error);
     }
+  }
+
+  /**
+   * Checks the last reset date and resets the daily photo count if a new day has started.
+   */
+  private async checkAndResetDailyCount(): Promise<void> {
+    if (!this.currentSession) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    if (this.currentSession.lastCountResetDate !== today) {
+      this.log(`New day detected. Resetting daily photo count from ${this.currentSession.dailyPhotoCount} to 0.`);
+      await this.updateSession({
+        dailyPhotoCount: 0,
+        lastCountResetDate: today,
+      });
+      this.emitEvent('daily_limit_reset', { newDate: today });
+    }
+  }
+
+  private async loadPremiumStatus(): Promise<void> {
+    try {
+      const premiumValue = await AsyncStorage.getItem(PREMIUM_KEY);
+      const isPremium = premiumValue ? JSON.parse(premiumValue) : false;
+      if (this.currentSession) {
+        this.currentSession.isPremium = isPremium;
+      }
+      this.log(`Loaded premium status: ${isPremium}`);
+    } catch (error) {
+      console.error('Failed to load premium status:', error);
+      if (this.currentSession) {
+        this.currentSession.isPremium = false; // Default to false on error
+      }
+    }
+  }
+
+  public async forceSessionRestore(): Promise<void> {
+    await this.attemptSessionRestore();
+    // After restoring, re-check daily count and premium status
+    await this.checkAndResetDailyCount();
+    await this.loadPremiumStatus();
+  }
+
+  public async startNewSession(): Promise<void> {
+    this.log('🚀 Starting new session from recovery...');
+    await this.sessionStorage.clear();
+    await this.createNewSession();
   }
 } 

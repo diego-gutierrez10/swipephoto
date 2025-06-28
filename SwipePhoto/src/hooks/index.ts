@@ -6,6 +6,7 @@ export { useOptimizedImage } from './useOptimizedImage';
 export { useCategoryMemory, useCategoryProgress as useCategoryProgressMemory, useNavigationTracking } from './useCategoryMemory';
 export { useSessionManager, useSessionLifecycle, useSessionOperations } from './useSessionManager';
 export { useProgressTracker, useProgressTracking, useProgressTrackerEvents } from './useProgressTracker';
+export { useSessionRecovery } from './useSessionRecovery';
 export { default as usePhotoTransition } from './usePhotoTransition';
 export { useCategoryProgress } from './useCategoryProgress';
 
@@ -25,3 +26,13 @@ export type { PhotoNavigationOptions, PhotoNavigationReturn } from './usePhotoNa
 export { useUndo } from './useUndo';
 export { useUndoVisualFeedback } from './useUndoVisualFeedback';
 export { useButtonAnimation } from './useButtonAnimation'; 
+export { useDebouncedPress } from './useDebouncedPress';
+
+export * from './usePhotoPermissions';
+export * from './usePhotoTransition';
+export * from './useProgressTracker';
+export * from './useSessionManager';
+export * from './useSessionRecovery';
+export * from './useUndo';
+export * from './useUndoVisualFeedback';
+export * from './useDebouncedPress'; 

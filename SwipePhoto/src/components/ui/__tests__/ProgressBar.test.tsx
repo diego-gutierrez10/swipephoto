@@ -6,7 +6,116 @@
  */
 
 import React from 'react';
+import { render, screen } from '@testing-library/react-native';
 import { ProgressBar, ProgressBarProps } from '../ProgressBar';
+import { ThemeProvider } from '../../layout/ThemeProvider';
+
+// Mock reanimated's useSharedValue and useAnimatedStyle
+// to return static values for testing
+jest.mock('react-native-reanimated', () => {
+  const Reanimated = jest.requireActual('react-native-reanimated');
+  const { View } = require('react-native');
+
+  return {
+    ...Reanimated,
+    useSharedValue: jest.fn((initialValue) => ({ value: initialValue })),
+    useAnimatedStyle: jest.fn((styleFactory) => styleFactory()),
+    withTiming: (toValue: number) => toValue,
+    interpolateColor: jest.fn(
+      (_value, _inputRange, outputRange) => outputRange[0]
+    ),
+    // Mock the animated components to be regular Views/Text
+    View,
+    Text: View, // Or require('react-native').Text if you need specific text props
+  };
+});
+
+
+describe('ProgressBar', () => {
+  const renderWithTheme = (props: ProgressBarProps) => {
+    return render(
+      <ThemeProvider>
+        <ProgressBar {...props} />
+      </ThemeProvider>
+    );
+  };
+
+  const toMB = (val: number) => (val / (1024 * 1024)).toFixed(1);
+
+  it('renders correctly with 50% progress', () => {
+    const current = 10 * 1024 * 1024; // 10 MB
+    const total = 20 * 1024 * 1024; // 20 MB
+
+    renderWithTheme({
+      current,
+      total,
+      testID: 'progress-bar-test',
+    });
+
+    // Check if the text is rendered correctly
+    const expectedText = `${toMB(current)} / ${toMB(total)} MB`;
+    expect(screen.getByText(expectedText)).toBeTruthy();
+
+    // Check if the progress bar container is rendered
+    expect(screen.getByTestId('progress-bar-test')).toBeTruthy();
+  });
+
+  it('renders correctly with 0% progress', () => {
+    const current = 0;
+    const total = 100 * 1024 * 1024; // 100 MB
+
+    renderWithTheme({
+      current,
+      total,
+      testID: 'progress-bar-test',
+    });
+
+    const expectedText = `${toMB(current)} / ${toMB(total)} MB`;
+    expect(screen.getByText(expectedText)).toBeTruthy();
+  });
+
+  it('renders correctly with 100% progress', () => {
+    const current = 50 * 1024 * 1024;
+    const total = 50 * 1024 * 1024;
+
+    renderWithTheme({
+      current,
+      total,
+      testID: 'progress-bar-test',
+    });
+
+    const expectedText = `${toMB(current)} / ${toMB(total)} MB`;
+    expect(screen.getByText(expectedText)).toBeTruthy();
+  });
+
+  it('handles zero total gracefully', () => {
+    const current = 0;
+    const total = 0;
+
+    renderWithTheme({
+      current,
+      total,
+      testID: 'progress-bar-test',
+    });
+
+    const expectedText = `${toMB(current)} / ${toMB(total)} MB`;
+    expect(screen.getByText(expectedText)).toBeTruthy();
+  });
+
+  it('displays text in percentage format when specified', () => {
+    const current = 25 * 1024 * 1024;
+    const total = 100 * 1024 * 1024;
+
+    renderWithTheme({
+      current,
+      total,
+      textFormat: 'percentage',
+      testID: 'progress-bar-test',
+    });
+
+    expect(screen.getByText('25%')).toBeTruthy();
+  });
+});
 
 // Mock test scenarios as specified in Task 8.1
 export const testScenarios = {

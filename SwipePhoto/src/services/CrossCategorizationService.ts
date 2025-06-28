@@ -134,8 +134,8 @@ class CrossCategorizationService {
       if (monthCategory || sourceCategory) {
         const organizationScore = this.calculateOrganizationScore(
           photo,
-          monthCategory,
-          sourceCategory
+          monthCategory ?? null,
+          sourceCategory ?? null
         );
 
         references.push({
@@ -397,4 +397,5 @@ class CrossCategorizationService {
   }
 }
 
-export default new CrossCategorizationService(); 
+const crossCategorizationService = new CrossCategorizationService();
+export default crossCategorizationService; 

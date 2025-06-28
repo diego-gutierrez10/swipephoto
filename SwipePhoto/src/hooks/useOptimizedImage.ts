@@ -17,6 +17,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ImageSourcePropType } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import NetInfo from '@react-native-community/netinfo';
+import { Image } from 'expo-image';
 
 export interface OptimizedImageSource {
   uri: string;
@@ -295,6 +296,10 @@ export const useOptimizedImage = (
     };
   }, []);
 
+  const preload = useCallback((sources: string[]) => {
+    Image.prefetch(sources);
+  }, []);
+
   return {
     source,
     isLoading,
@@ -303,5 +308,6 @@ export const useOptimizedImage = (
     retry,
     preloadImages,
     clearCache,
+    preload,
   };
 }; 

@@ -9,6 +9,17 @@ import { PhotoSourceType } from '../types/organization';
 export const detectPhotoSource = (photo: PhotoAsset): PhotoSourceType => {
   const filename = photo.fileName?.toLowerCase() || '';
   const uri = photo.uri?.toLowerCase() || '';
+  const albumName = photo.albumName?.toLowerCase() || '';
+  
+  // Screenshot detection should be prioritized
+  if (isScreenshot(filename, uri, albumName)) {
+    return PhotoSourceType.SCREENSHOTS;
+  }
+  
+  // Safari download detection
+  if (isSafariDownload(filename, uri, albumName)) {
+    return PhotoSourceType.SAFARI;
+  }
   
   // WhatsApp detection patterns
   if (isWhatsAppPhoto(filename, uri)) {
@@ -23,11 +34,6 @@ export const detectPhotoSource = (photo: PhotoAsset): PhotoSourceType => {
   // Telegram detection patterns
   if (isTelegramPhoto(filename, uri)) {
     return PhotoSourceType.TELEGRAM;
-  }
-  
-  // Screenshot detection patterns
-  if (isScreenshot(filename, uri)) {
-    return PhotoSourceType.SCREENSHOTS;
   }
   
   // Camera detection patterns
@@ -93,17 +99,47 @@ const isTelegramPhoto = (filename: string, uri: string): boolean => {
 /**
  * Check if photo is a screenshot
  */
-const isScreenshot = (filename: string, uri: string): boolean => {
+const isScreenshot = (filename: string, uri: string, albumName: string): boolean => {
+  // Album name is the most reliable indicator on iOS
+  if (albumName === 'screenshots') {
+    return true;
+  }
+
   const screenshotPatterns = [
     /screenshot/i,
-    /screen_?shot/i,
+    /^screen_?shot/i, // More specific to start of filename
     /capture/i,
-    /img_\d{8}_\d{6}/i, // Android screenshot pattern
-    /screenshot_\d{8}/i,
-    /screen.*\d{4}-\d{2}-\d{2}/i
+    /^img_\d{4}\.(png|PNG)$/, // iOS screenshot pattern like IMG_0001.PNG
+    /^screenshot.*\d{4}-\d{2}-\d{2}/i // Another common pattern
   ];
   
+  // In iOS, screenshots are often PNGs with a sequential IMG_ number.
+  // This is not foolproof but a strong indicator when combined with PNG format.
+  if (/\.png$/i.test(filename) && /^img_\d{4,}/i.test(filename)) {
+    return true;
+  }
+  
   return screenshotPatterns.some(pattern => pattern.test(filename) || pattern.test(uri));
+};
+
+/**
+ * Check if photo is a download from Safari
+ */
+const isSafariDownload = (filename: string, uri: string, albumName: string): boolean => {
+  // Album name is the most reliable indicator on iOS for app-specific albums
+  if (albumName === 'safari') {
+    return true;
+  }
+
+  // Fallback to filename/uri patterns if album name is not conclusive
+  const safariPatterns = [
+    /safari/i,
+    /download/i,
+  ];
+
+  // A better check would be against `sourceApplication` or `albumName` if available.
+  // We now have albumName, so the primary check is above.
+  return safariPatterns.some(pattern => pattern.test(filename) || pattern.test(uri));
 };
 
 /**
@@ -148,6 +184,7 @@ export const getSourceDisplayName = (sourceType: PhotoSourceType, locale = 'en-U
     [PhotoSourceType.INSTAGRAM]: 'Instagram',
     [PhotoSourceType.TELEGRAM]: 'Telegram',
     [PhotoSourceType.SCREENSHOTS]: 'Screenshots',
+    [PhotoSourceType.SAFARI]: 'Safari Downloads',
     [PhotoSourceType.OTHER_APPS]: 'Other Apps',
     [PhotoSourceType.UNKNOWN]: 'Unknown Source'
   };
@@ -167,6 +204,7 @@ export const getSourceIcon = (sourceType: PhotoSourceType): string => {
     [PhotoSourceType.INSTAGRAM]: 'instagram',
     [PhotoSourceType.TELEGRAM]: 'send',
     [PhotoSourceType.SCREENSHOTS]: 'monitor',
+    [PhotoSourceType.SAFARI]: 'compass',
     [PhotoSourceType.OTHER_APPS]: 'folder',
     [PhotoSourceType.UNKNOWN]: 'help-circle'
   };
@@ -186,6 +224,7 @@ export const getSourceDescription = (sourceType: PhotoSourceType): string => {
     [PhotoSourceType.INSTAGRAM]: 'Photos from Instagram',
     [PhotoSourceType.TELEGRAM]: 'Images from Telegram chats',
     [PhotoSourceType.SCREENSHOTS]: 'Screen captures and screenshots',
+    [PhotoSourceType.SAFARI]: 'Images downloaded from Safari',
     [PhotoSourceType.OTHER_APPS]: 'Photos from various other applications',
     [PhotoSourceType.UNKNOWN]: 'Photos from unidentified sources'
   };
@@ -203,6 +242,7 @@ export const sortSourcesByPriority = (sourceTypes: PhotoSourceType[]): PhotoSour
     PhotoSourceType.CAMERA_ROLL,
     PhotoSourceType.SCREENSHOTS,
     PhotoSourceType.WHATSAPP,
+    PhotoSourceType.SAFARI,
     PhotoSourceType.INSTAGRAM,
     PhotoSourceType.TELEGRAM,
     PhotoSourceType.OTHER_APPS,

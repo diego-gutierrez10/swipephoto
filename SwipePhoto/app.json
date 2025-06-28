@@ -27,21 +27,21 @@
         "NSPhotoLibraryUsageDescription": "SwipePhoto helps you organize your photos locally on your device by swiping them into custom categories. Your photos stay completely private and are never uploaded or shared.",
         "NSCameraUsageDescription": "SwipePhoto lets you take new photos to organize alongside your existing ones. All processing happens locally on your device.",
         "PHPhotoLibraryPreventAutomaticLimitedAccessAlert": true,
-        "NSPhotoLibraryAddUsageDescription": "SwipePhoto can save organized photos back to your library if you choose. This is entirely optional and local to your device."
+        "NSPhotoLibraryAddUsageDescription": "SwipePhoto can save organized photos back to your library if you choose. This is entirely optional and local to your device.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.diegogutierrez.swipephoto",
-      "compileSdkVersion": 34,
-      "targetSdkVersion": 34,
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "READ_MEDIA_IMAGES",
-        "READ_EXTERNAL_STORAGE",
-        "CAMERA"
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "edgeToEdgeEnabled": true
     },
@@ -50,7 +50,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "36d4d777-c700-45c2-a55f-f4c6cf34a2c0"
       }
     }
   }

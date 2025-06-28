@@ -15,6 +15,7 @@ import ProgressSystemDemoScreen from './ProgressSystemDemoScreen';
 import { UndoButtonDemoScreen } from './UndoButtonDemoScreen';
 import SessionManagerDemoScreen from './SessionManagerDemoScreen';
 import ProgressTrackerDemoScreen from './ProgressTrackerDemoScreen';
+import { SessionRecoveryDemoScreen } from './SessionRecoveryDemoScreen';
 
 export const SwipeTestScreen: React.FC = () => {
   const [showPhotoCard, setShowPhotoCard] = useState(false);
@@ -25,6 +26,7 @@ export const SwipeTestScreen: React.FC = () => {
   const [showUndoDemo, setShowUndoDemo] = useState(false);
   const [showSessionManager, setShowSessionManager] = useState(false);
   const [showProgressTracker, setShowProgressTracker] = useState(false);
+  const [showSessionRecovery, setShowSessionRecovery] = useState(false);
 
   const handlePhotoDelete = () => {
     console.log('Photo deleted!');
@@ -46,6 +48,21 @@ export const SwipeTestScreen: React.FC = () => {
     console.log('Main Swipe Queue Complete!');
     // Could navigate to next screen or show completion message
   };
+
+  // If showing session recovery demo (Task 10.5), render full screen
+  if (showSessionRecovery) {
+    return (
+      <View style={{ flex: 1 }}>
+        <SessionRecoveryDemoScreen />
+        <TouchableOpacity 
+          style={[styles.backButton, { position: 'absolute', top: 60, left: 20, zIndex: 1001 }]}
+          onPress={() => setShowSessionRecovery(false)}
+        >
+          <Text style={styles.backButtonText}>← Back to Test Menu</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // If showing progress tracker demo (Task 10.4), render full screen
   if (showProgressTracker) {
@@ -295,6 +312,18 @@ export const SwipeTestScreen: React.FC = () => {
               🔄 Test Progress Tracker (Task 10.4)
             </Text>
           </TouchableOpacity>
+
+          {/* Test Session Recovery Demo (Task 10.5) */}
+          <TouchableOpacity
+            style={styles.sessionRecoveryButton}
+            onPress={() => setShowSessionRecovery(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Test Session Recovery and Crash Detection for Task 10.5"
+          >
+            <Text style={styles.sessionRecoveryButtonText}>
+              🛡️ Test Session Recovery (Task 10.5)
+            </Text>
+          </TouchableOpacity>
           
           {/* Conditional Card Display */}
           {showPhotoCard ? (
@@ -534,6 +563,26 @@ const styles = StyleSheet.create({
   },
   progressTrackerButtonText: {
     color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  sessionRecoveryButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  sessionRecoveryButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',

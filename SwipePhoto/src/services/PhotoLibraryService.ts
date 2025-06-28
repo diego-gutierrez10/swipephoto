@@ -6,6 +6,7 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 import {
   PhotoPickerOptions,
   PhotoAsset,
@@ -123,8 +124,35 @@ export class PhotoLibraryService implements IPhotoLibraryService {
       // Fetch assets from media library
       const { assets } = await MediaLibrary.getAssetsAsync(fetchOptions);
 
-      // Convert to our PhotoAsset format
-      const photoAssets: PhotoAsset[] = assets.map(asset => ({
+      // Get detailed asset info for each asset to get the correct URI
+      const photoAssets: PhotoAsset[] = await Promise.all(
+        assets.map(async (asset) => {
+          try {
+            // Get asset info which includes the local URI that can be displayed
+            const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
+            
+            // Get album name
+            let albumName: string | undefined = undefined;
+            if (asset.albumId) {
+              const album = await MediaLibrary.getAlbumAsync(asset.albumId);
+              albumName = album?.title;
+            }
+
+            return {
+              id: asset.id,
+              uri: assetInfo.localUri || assetInfo.uri, // Use localUri if available, fallback to uri
+              width: asset.width,
+              height: asset.height,
+              fileName: asset.filename,
+              creationTime: asset.creationTime,
+              duration: asset.duration,
+              type: asset.mediaType,
+              albumName: albumName,
+            };
+          } catch (error) {
+            console.warn(`Failed to get asset info for ${asset.id}:`, error);
+            // Fallback to basic asset info
+            return {
         id: asset.id,
         uri: asset.uri,
         width: asset.width,
@@ -133,7 +161,11 @@ export class PhotoLibraryService implements IPhotoLibraryService {
         creationTime: asset.creationTime,
         duration: asset.duration,
         type: asset.mediaType,
-      }));
+              albumName: asset.albumId, // Fallback, though not ideal
+            };
+          }
+        })
+      );
 
       return {
         success: true,
@@ -172,6 +204,7 @@ export class PhotoLibraryService implements IPhotoLibraryService {
 
       // Get asset info
       const asset = await MediaLibrary.getAssetInfoAsync(id);
+      const fileInfo = await FileSystem.getInfoAsync(asset.uri);
 
       const photoAsset: PhotoAsset = {
         id: asset.id,
@@ -182,6 +215,7 @@ export class PhotoLibraryService implements IPhotoLibraryService {
         creationTime: asset.creationTime,
         duration: asset.duration,
         type: asset.mediaType,
+        fileSize: fileInfo.exists ? fileInfo.size : 0,
       };
 
       return {
@@ -243,6 +277,56 @@ export class PhotoLibraryService implements IPhotoLibraryService {
     } catch (error) {
       console.error('PhotoLibraryService: Error checking availability:', error);
       return false;
+    }
+  }
+
+  /**
+   * Delete photos from the device library.
+   * This moves them to the "Recently Deleted" album on iOS.
+   */
+  public async deletePhotosFromLibrary(assetIds: string[]): Promise<PhotoLibraryResult<void>> {
+    try {
+      if (!assetIds || assetIds.length === 0) {
+        return { success: true }; // Nothing to delete
+      }
+
+      // 1. Check permissions
+      const { status } = await MediaLibrary.getPermissionsAsync();
+      if (status !== 'granted') {
+        throw new PhotoLibraryException(
+          PhotoLibraryError.PERMISSION_DENIED,
+          'Permission to access photo library is required to delete photos.'
+        );
+      }
+
+      // 2. Attempt to delete the assets
+      const result = await MediaLibrary.deleteAssetsAsync(assetIds);
+
+      if (result) {
+        return { success: true };
+      } else {
+        // This can happen if, for example, some assets were already deleted
+        // or do not exist. We'll consider it a partial success with a warning.
+        console.warn('PhotoLibraryService: deleteAssetsAsync returned false. Some assets may not have been deleted.');
+        return { 
+          success: false, 
+          error: 'Could not delete some of the selected photos. They may have been already deleted.'
+        };
+      }
+    } catch (error) {
+      console.error('PhotoLibraryService: Error in deletePhotosFromLibrary:', error);
+
+      if (error instanceof PhotoLibraryException) {
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'An unexpected error occurred while trying to delete photos.',
+      };
     }
   }
 

@@ -122,6 +122,7 @@ export const Button: React.FC<ButtonProps> = ({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
+      testID="button"
     >
       {loading ? (
         <ActivityIndicator
@@ -130,6 +131,7 @@ export const Button: React.FC<ButtonProps> = ({
             ? colors.background 
             : colors.primary
           }
+          testID="button-loading-indicator"
         />
       ) : (
         <Text style={[getTextStyle(), textStyle]}>{title}</Text>

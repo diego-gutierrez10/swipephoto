@@ -2,8 +2,8 @@ export interface Photo {
   id: string;
   uri: string;
   filename: string;
-  createdAt: Date;
-  modifiedAt?: Date;
+  createdAt: number;
+  modifiedAt?: number;
   size: number;
   width: number;
   height: number;

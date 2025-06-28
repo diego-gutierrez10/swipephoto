@@ -41,6 +41,7 @@ export enum PhotoSourceType {
   SCREENSHOTS = 'screenshots',
   INSTAGRAM = 'instagram',
   TELEGRAM = 'telegram',
+  SAFARI = 'safari',
   OTHER_APPS = 'other_apps',
   UNKNOWN = 'unknown'
 }
@@ -126,10 +127,15 @@ export interface OrganizationState {
   filters: OrganizationFilters;
   selectedCategoryId: string | null;
   selectedCategoryType: 'month' | 'source' | null;
+  deletionQueue: string[]; // Array of photo IDs marked for deletion
   
   // Error handling
   error: string | null;
   lastError: number | null;
+
+  // Usage stats
+  lastFreedSpace: number;
+  accumulatedFreedSpace: number;
 }
 
 /**

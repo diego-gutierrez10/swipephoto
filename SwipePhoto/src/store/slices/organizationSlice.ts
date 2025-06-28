@@ -27,6 +27,7 @@ const initialState: OrganizationState = {
       [PhotoSourceType.SCREENSHOTS]: [],
       [PhotoSourceType.INSTAGRAM]: [],
       [PhotoSourceType.TELEGRAM]: [],
+      [PhotoSourceType.SAFARI]: [],
       [PhotoSourceType.OTHER_APPS]: [],
       [PhotoSourceType.UNKNOWN]: []
     }
@@ -50,7 +51,10 @@ const initialState: OrganizationState = {
   selectedCategoryId: null,
   selectedCategoryType: null,
   error: null,
-  lastError: null
+  lastError: null,
+  deletionQueue: [],
+  lastFreedSpace: 0,
+  accumulatedFreedSpace: 0,
 };
 
 // Async thunks for complex operations
@@ -244,6 +248,37 @@ const organizationSlice = createSlice({
       state.selectedCategoryType = null;
     },
 
+    // Deletion queue management
+    addToDeletionQueue: (state, action: PayloadAction<string>) => {
+      const photoId = action.payload;
+      if (!state.deletionQueue.includes(photoId)) {
+        state.deletionQueue.push(photoId);
+      }
+    },
+
+    removeFromDeletionQueue: (state, action: PayloadAction<string>) => {
+      const photoIdToRemove = action.payload;
+      state.deletionQueue = state.deletionQueue.filter(
+        (id) => id !== photoIdToRemove
+      );
+    },
+
+    clearDeletionQueue: (state) => {
+      state.deletionQueue = [];
+    },
+
+    setLastFreedSpace: (state, action: PayloadAction<number>) => {
+      state.lastFreedSpace = action.payload;
+      state.accumulatedFreedSpace += action.payload;
+    },
+
+    clearLastFreedSpace: (state) => {
+      state.lastFreedSpace = 0;
+    },
+
+    // Full state reset for logout or debugging
+    resetOrganizationState: () => initialState,
+
     // Utility actions
          rebuildIndexes: (state) => {
        // Rebuild all indexes from current data
@@ -255,6 +290,7 @@ const organizationSlice = createSlice({
          [PhotoSourceType.SCREENSHOTS]: [],
          [PhotoSourceType.INSTAGRAM]: [],
          [PhotoSourceType.TELEGRAM]: [],
+         [PhotoSourceType.SAFARI]: [],
          [PhotoSourceType.OTHER_APPS]: [],
          [PhotoSourceType.UNKNOWN]: []
        };
@@ -348,8 +384,16 @@ export const {
   rebuildIndexes,
   updateCategoryCounts,
   clearOrganization,
-  addPhotoToOrganization
+  addPhotoToOrganization,
+  addToDeletionQueue,
+  removeFromDeletionQueue,
+  clearDeletionQueue,
+  setLastFreedSpace,
+  clearLastFreedSpace,
+  resetOrganizationState
 } = organizationSlice.actions;
+
+export const selectOrganizationState = (state: { organization: OrganizationState }) => state.organization;
 
 // Export reducer
 export default organizationSlice.reducer; 

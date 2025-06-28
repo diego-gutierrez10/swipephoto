@@ -21,6 +21,8 @@ export interface CategoryProgress {
   lastPhotoIndex: number;
   totalPhotos: number;
   completedPhotos: number;
+  keptCount?: number;
+  deletedCount?: number;
   lastAccessTime: number;
   categoryType: 'month' | 'source';
 }

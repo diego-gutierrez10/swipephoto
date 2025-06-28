@@ -39,6 +39,8 @@ export interface PhotoAsset {
   fileSize?: number;
   /** Original filename */
   fileName?: string;
+  /** Name of the album containing the photo */
+  albumName?: string;
   /** Creation timestamp (milliseconds since epoch) */
   creationTime?: number;
   /** File type/extension */

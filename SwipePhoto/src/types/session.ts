@@ -152,6 +152,15 @@ export interface SessionState {
     crashRecoveryAttempts: number;
     lastCrashTime?: number;
   };
+
+  // Navigation
+  currentScreen: string | null;
+  navigationHistory: string[];
+
+  // Freemium model usage tracking
+  dailyPhotoCount: number;
+  lastCountResetDate: string; // ISO 8601 date string
+  isPremium?: boolean;
 }
 
 /**
@@ -363,15 +372,24 @@ export const createDefaultSessionState = (sessionId: string): SessionState => ({
     lastSessionDuration: 0,
     crashRecoveryAttempts: 0,
   },
+
+  // Navigation
+  currentScreen: 'Home',
+  navigationHistory: [],
+
+  // Freemium
+  dailyPhotoCount: 0,
+  lastCountResetDate: new Date().toISOString().split('T')[0],
+  isPremium: false,
 });
 
 /**
  * Default storage configuration
  */
 export const DEFAULT_SESSION_CONFIG: SessionStorageConfig = {
-  sessionKey: '@SwipePhoto_session_state',
-  backupKey: '@SwipePhoto_session_backup',
-  metadataKey: '@SwipePhoto_session_metadata',
+  sessionKey: 'SwipePhoto_session_state',
+  backupKey: 'SwipePhoto_session_backup',
+  metadataKey: 'SwipePhoto_session_metadata',
   
   enableEncryption: true,
   
@@ -400,7 +418,10 @@ export type SessionEvent =
   | 'session_recovery_failed'
   | 'session_crash_detected'
   | 'storage_error'
-  | 'storage_quota_exceeded';
+  | 'storage_quota_exceeded'
+  | 'session_resumed'
+  | 'validation_error'
+  | 'daily_limit_reset';
 
 /**
  * Session event callback
