@@ -77,7 +77,8 @@ coverage/
 .yarn-integrity
 
 # Build artifacts
-# build/
+build/
+!/.eas/build
 dist/
 
 # Temporary folders
