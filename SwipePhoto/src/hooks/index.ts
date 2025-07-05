@@ -27,6 +27,7 @@ export { useUndo } from './useUndo';
 export { useUndoVisualFeedback } from './useUndoVisualFeedback';
 export { useButtonAnimation } from './useButtonAnimation'; 
 export { useDebouncedPress } from './useDebouncedPress';
+export { useInAppPurchases } from './useInAppPurchases';
 
 export * from './usePhotoPermissions';
 export * from './usePhotoTransition';

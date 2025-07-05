@@ -1,27 +1,50 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import LottieAnimation from '../components/common/LottieAnimation';
+import { useInAppPurchases } from '../hooks';
+import { SUBSCRIPTION_SKUS } from '../services/InAppPurchaseService';
 
 type UpgradeScreenRouteProp = RouteProp<RootStackParamList, 'Upgrade'>;
 
 export const UpgradeScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<UpgradeScreenRouteProp>();
+  const { products, subscriptionStatus, isLoading, purchaseSubscription, restorePurchases } = useInAppPurchases();
+  const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null);
 
   const limitReached = route.params?.limitReached;
 
-  const handleUpgrade = () => {
-    // TODO: Implement in-app purchase logic
-    console.log('Upgrade button pressed');
+  // If user is already subscribed, redirect them back
+  React.useEffect(() => {
+    if (subscriptionStatus.isSubscribed) {
+      navigation.goBack();
+    }
+  }, [subscriptionStatus.isSubscribed, navigation]);
+
+  const handlePurchase = async (productId: string) => {
+    setPurchasingProduct(productId);
+    const success = await purchaseSubscription(productId as any);
+    setPurchasingProduct(null);
+    
+    if (success) {
+      navigation.goBack();
+    }
   };
 
-  const handleRestore = () => {
-    // TODO: Implement restore purchases logic
-    console.log('Restore purchases button pressed');
+  const handleRestore = async () => {
+    const success = await restorePurchases();
+    if (success) {
+      navigation.goBack();
+    }
   };
+
+  // Get product details
+  const monthlyProduct = products.find(p => p.id === SUBSCRIPTION_SKUS.MONTHLY);
+  const yearlyProduct = products.find(p => p.id === SUBSCRIPTION_SKUS.YEARLY);
+  const weeklyProduct = products.find(p => p.id === SUBSCRIPTION_SKUS.WEEKLY);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -55,11 +78,79 @@ export const UpgradeScreen: React.FC = () => {
           <Text style={styles.featureText}>✓ Priority support</Text>
         </View>
 
-        <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade}>
-          <Text style={styles.upgradeButtonText}>Upgrade Now - $8.99/month</Text>
-        </TouchableOpacity>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#DFFF00" />
+            <Text style={styles.loadingText}>Loading subscription options...</Text>
+          </View>
+        ) : (
+          <ScrollView style={styles.subscriptionOptions} showsVerticalScrollIndicator={false}>
+            {/* Yearly Subscription (Best Value) */}
+            {yearlyProduct && (
+              <TouchableOpacity 
+                style={[styles.subscriptionButton, styles.bestValueButton]} 
+                onPress={() => handlePurchase(yearlyProduct.id)}
+                disabled={purchasingProduct !== null}
+              >
+                <View style={styles.bestValueBadge}>
+                  <Text style={styles.bestValueText}>BEST VALUE</Text>
+                </View>
+                {purchasingProduct === yearlyProduct.id ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <>
+                    <Text style={styles.subscriptionTitle}>SwipeAI Pro - Yearly</Text>
+                    <Text style={styles.subscriptionPrice}>{yearlyProduct.localizedPrice}/year</Text>
+                    <Text style={styles.subscriptionSavings}>Save over 70%</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
 
-        <TouchableOpacity style={styles.restoreButton} onPress={handleRestore}>
+            {/* Monthly Subscription */}
+            {monthlyProduct && (
+              <TouchableOpacity 
+                style={styles.subscriptionButton} 
+                onPress={() => handlePurchase(monthlyProduct.id)}
+                disabled={purchasingProduct !== null}
+              >
+                {purchasingProduct === monthlyProduct.id ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <>
+                    <Text style={styles.subscriptionTitle}>SwipeAI Pro - Monthly</Text>
+                    <Text style={styles.subscriptionPrice}>{monthlyProduct.localizedPrice}/month</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Weekly Subscription */}
+            {weeklyProduct && (
+              <TouchableOpacity 
+                style={styles.subscriptionButton} 
+                onPress={() => handlePurchase(weeklyProduct.id)}
+                disabled={purchasingProduct !== null}
+              >
+                {purchasingProduct === weeklyProduct.id ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <>
+                    <Text style={styles.subscriptionTitle}>SwipeAI Pro - Weekly</Text>
+                    <Text style={styles.subscriptionPrice}>{weeklyProduct.localizedPrice}/week</Text>
+                    <Text style={styles.subscriptionTrialText}>Perfect for trying out</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
+
+        <TouchableOpacity 
+          style={styles.restoreButton} 
+          onPress={handleRestore}
+          disabled={isLoading || purchasingProduct !== null}
+        >
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
       </View>
@@ -144,5 +235,73 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8E8E93',
     textDecorationLine: 'underline',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    color: '#8E8E93',
+    fontSize: 16,
+    marginTop: 10,
+  },
+  subscriptionOptions: {
+    maxHeight: 300,
+    alignSelf: 'stretch',
+    marginBottom: 20,
+  },
+  subscriptionButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginBottom: 12,
+    minHeight: 70,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  bestValueButton: {
+    backgroundColor: '#DFFF00', // Neon Yellow for best value
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  bestValueBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 10,
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  bestValueText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  subscriptionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  subscriptionPrice: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  subscriptionSavings: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  subscriptionTrialText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
   },
 }); 

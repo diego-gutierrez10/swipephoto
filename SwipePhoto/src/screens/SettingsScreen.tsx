@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UsageStats } from '../components/ui/UsageStats';
 import { SessionManager } from '../services/SessionManager';
+import { useInAppPurchases } from '../hooks';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -16,6 +17,7 @@ export const SettingsScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const sessionManager = SessionManager.getInstance();
+  const { subscriptionStatus, restorePurchases } = useInAppPurchases();
 
   useEffect(() => {
     const loadPreferences = async () => {
@@ -27,11 +29,14 @@ export const SettingsScreen: React.FC = () => {
       if (storedNotifications !== null) {
         setNotificationsEnabled(JSON.parse(storedNotifications));
       }
-      const premiumStatus = sessionManager.isPremium();
-      setIsPremium(premiumStatus);
+      // Get premium status from both session manager and subscription status
+      const sessionPremiumStatus = sessionManager.isPremium();
+      const realSubscriptionStatus = subscriptionStatus.isSubscribed;
+      // Use the real subscription status if available, otherwise fall back to session manager
+      setIsPremium(realSubscriptionStatus || sessionPremiumStatus);
     };
     loadPreferences();
-  }, []);
+  }, [subscriptionStatus.isSubscribed]);
 
   const toggleHapticFeedback = async () => {
     const newValue = !hapticFeedback;
@@ -70,9 +75,28 @@ export const SettingsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
       <ScrollView style={styles.scrollView}>
-        <TouchableOpacity style={styles.premiumButton} onPress={() => navigation.navigate('Upgrade', { limitReached: false })}>
-          <Text style={styles.premiumButtonText}>Go Premium!</Text>
-        </TouchableOpacity>
+        {subscriptionStatus.isSubscribed ? (
+          <View style={styles.premiumStatusContainer}>
+            <View style={styles.premiumActiveContainer}>
+              <Ionicons name="checkmark-circle" size={24} color="#00C851" />
+              <Text style={styles.premiumActiveText}>SwipeAI Pro Active</Text>
+            </View>
+            {subscriptionStatus.activeSubscription && (
+              <Text style={styles.subscriptionTypeText}>
+                {subscriptionStatus.activeSubscription.includes('Yearly') ? 'Yearly Plan' :
+                 subscriptionStatus.activeSubscription.includes('Monthly') ? 'Monthly Plan' :
+                 subscriptionStatus.activeSubscription.includes('Weekly') ? 'Weekly Plan' : 'Premium'}
+              </Text>
+            )}
+            <TouchableOpacity style={styles.restorePurchasesButton} onPress={restorePurchases}>
+              <Text style={styles.restorePurchasesText}>Restore Purchases</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.premiumButton} onPress={() => navigation.navigate('Upgrade', { limitReached: false })}>
+            <Text style={styles.premiumButtonText}>Go Premium!</Text>
+          </TouchableOpacity>
+        )}
         <UsageStats />
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionHeaderText}>General</Text>
@@ -223,5 +247,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+  },
+  premiumStatusContainer: {
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+    borderRadius: 12,
+    margin: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  premiumActiveContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  premiumActiveText: {
+    color: '#00C851',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  subscriptionTypeText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  restorePurchasesButton: {
+    backgroundColor: '#333',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  restorePurchasesText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 }); 

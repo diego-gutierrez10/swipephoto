@@ -18,7 +18,8 @@
         {
           "photosPermission": "The app accesses your photos to let you organize them by swiping into categories."
         }
-      ]
+      ],
+      "react-native-iap"
     ],
     "ios": {
       "supportsTablet": false,
