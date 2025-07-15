@@ -50,16 +50,11 @@ export const UsageStats: React.FC = () => {
 
       <Text style={styles.title}>Total Space Saved</Text>
       
-      <ProgressBar 
-        current={accumulatedFreedSpace} 
-        total={currentGoal}
-        textFormat="fraction"
-        fillColor={['#39FF14', '#00e676']}
-      />
-      
-      <Text style={styles.goalText}>
-        Next Goal: {UsageStatsService.formatBytes(currentGoal)}
-      </Text>
+      <View style={styles.savedSpaceContainer}>
+        <Text style={styles.savedSpaceText}>
+          {UsageStatsService.formatBytes(accumulatedFreedSpace)}
+        </Text>
+      </View>
 
     </View>
   );
@@ -96,5 +91,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     padding: 10,
+  },
+  savedSpaceContainer: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedSpaceText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 }); 

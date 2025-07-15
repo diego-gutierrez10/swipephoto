@@ -1,7 +1,8 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { darkTheme, lightTheme, ThemeColors } from '@constants/theme/colors';
-import { spacing } from '@constants/theme/spacing';
-import { typography } from '@constants/theme/typography';
+import { darkTheme, lightTheme, ThemeColors } from '@/constants/theme/colors';
+import { spacing } from '@/constants/theme/spacing';
+import { typography } from '@/constants/theme/typography';
+import { useColorScheme } from 'react-native';
 
 type Theme = {
   colors: ThemeColors;

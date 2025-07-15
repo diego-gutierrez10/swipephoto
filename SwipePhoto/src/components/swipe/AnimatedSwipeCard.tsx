@@ -11,21 +11,19 @@ import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SwipeGestureHandler, { SwipeDirection } from './SwipeGestureHandler';
 import PhotoStack from '../photo/PhotoStack';
-import { PhotoCounter } from '../ui';
-import { EnhancedUndoButton } from '../undo/EnhancedUndoButton';
-import { UndoVisualFeedback } from '../undo/UndoVisualFeedback';
 import { useUndo } from '../../hooks/useUndo';
 import { useAppDispatch } from '../../store';
 import { recordAndDispatchSwipeAction } from '../../store/thunks/undoThunks';
-import type { PhotoItem } from '../../services/PhotoPreloadingService';
+import type { Photo } from '../../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export interface MainSwipeCardProps {
-  photos: PhotoItem[];
+  photos: Photo[];
   currentIndex: number;
   onSwipeComplete: (direction: SwipeDirection) => void;
   onPhotoChange?: (newIndex: number) => void;
+  onCardTap?: () => void;
 }
 
 const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
@@ -33,6 +31,7 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
   currentIndex,
   onSwipeComplete,
   onPhotoChange,
+  onCardTap,
 }) => {
   // Redux dispatch for undo functionality
   const dispatch = useAppDispatch();
@@ -103,17 +102,7 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
         <PhotoStack
           photos={photos}
           currentIndex={currentIndex}
-          swipeTranslateX={translateX}
-          swipeProgress={swipeProgress}
-          swipeDirection={swipeDirection}
-          isAnimatingOut={isAnimatingOut}
-          showStackDepth={2}
-          stackOffset={8}
-          preloadingOptions={{
-            preloadCount: 3,
-            maxCacheSize: 8,
-            enableProgressiveLoading: true,
-          }}
+          onCardTap={onCardTap}
         />
       </SwipeGestureHandler>
 
@@ -156,37 +145,19 @@ const MainSwipeCard: React.FC<MainSwipeCardProps> = ({
 
 
       {/* Photo Counter - Task 8.2 implementation */}
-      <PhotoCounter
+      {/* <PhotoCounter
         current={currentIndex + 1}
         total={photos.length}
         style={styles.photoCounter}
         testID="main-swipe-photo-counter"
-      />
+      /> */}
 
       {/* Date info */}
-      <View style={styles.dateInfo}>
+      {/* <View style={styles.dateInfo}>
         <Text style={styles.dateText}>
           📅 {new Date().toLocaleDateString()}
         </Text>
-      </View>
-
-      {/* Undo Button - Task 9 Implementation */}
-      <EnhancedUndoButton
-        position={{ bottom: 200, right: 20 }}
-        size={56}
-        style={styles.undoButton}
-        enableHaptics={true}
-        testID="main-swipe-undo-button"
-      />
-
-      {/* Visual Feedback for Undo Actions - Task 9.5 */}
-      <UndoVisualFeedback
-        visible={false}
-        type="card-restored"
-        style={styles.undoFeedback}
-        enableSound={true}
-        reducedMotion={false}
-      />
+      </View> */}
     </GestureHandlerRootView>
   );
 };
@@ -274,44 +245,27 @@ const styles = StyleSheet.create({
 
 
 
-  // Photo Counter - Task 8.2
   photoCounter: {
     position: 'absolute',
-    bottom: 60,
-    zIndex: 10,
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 
-  // Date info
   dateInfo: {
     position: 'absolute',
     bottom: 20,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    zIndex: 10,
-  },
-  dateText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-  },
-
-  // Undo Button - Task 9
-  undoButton: {
-    position: 'absolute',
-    bottom: 200,
     right: 20,
-    zIndex: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 
-  // Undo Visual Feedback - Task 9.5
-  undoFeedback: {
-    position: 'absolute',
-    top: screenHeight * 0.4,
-    left: 0,
-    right: 0,
-    zIndex: 15,
+  dateText: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
 });
 

@@ -33,6 +33,13 @@ const slides = [
   },
   {
     key: '4',
+    title: 'Tap to Undo',
+    text: 'Made a mistake? Just tap the photo to undo.',
+    animation: require('../assets/animations/touchundo.json'),
+    color: '#8A2BE2',
+  },
+  {
+    key: '5',
     title: 'Ready to Start?',
     text: "Let's get your photo library organized.",
     animation: require('../assets/animations/rocket.json'),
@@ -67,11 +74,11 @@ const OnboardingScreen = () => {
       if (dontShowAgain) {
         await AsyncStorage.setItem('@hasOnboarded', 'true');
       }
-      navigation.replace('CategoryList');
+      navigation.replace('PrePermissionRationale');
     } catch (e) {
       console.error('Failed to save onboarding status', e);
       // Still navigate, but log the error
-      navigation.replace('CategoryList');
+      navigation.replace('PrePermissionRationale');
     }
   };
 

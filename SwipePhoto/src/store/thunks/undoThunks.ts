@@ -10,7 +10,8 @@ import { RootState } from '../index';
 import { undoLastAction as undoLastActionReducer } from '../slices/undoSlice';
 import { setCurrentPhoto } from '../slices/photoSlice';
 import type { UndoableSwipeAction, UndoResult } from '../../types/undo';
-import { HapticFeedbackService } from '../../services/HapticFeedbackService';
+import HapticFeedbackService from '../../services/HapticFeedbackService';
+import * as Haptics from 'expo-haptics';
 
 /**
  * Error types for undo operations
@@ -67,7 +68,8 @@ export const undoSwipeAction = createAsyncThunk<
       // Provide haptic feedback before undo
       if (enableHaptics) {
         try {
-          await HapticFeedbackService.triggerUndoFeedback();
+          // Use the new singleton service
+          HapticFeedbackService.trigger(Haptics.ImpactFeedbackStyle.Heavy);
         } catch (hapticError) {
           // Haptic failure should not block undo
           if (__DEV__) {
@@ -190,7 +192,7 @@ export const clearUndoSession = createAsyncThunk<
  */
 function validateUndoAction(action: UndoableSwipeAction, state: RootState): UndoError | null {
   // Check if photo still exists in state
-  const photoExists = state.photos.photos.some(photo => photo.id === action.photoId);
+  const photoExists = !!state.photos.photos.byId[action.photoId];
   
   if (!photoExists) {
     return {
@@ -214,105 +216,56 @@ async function executeUndo(
   dispatch: any, 
   getState: () => RootState
 ): Promise<{ restoredState: any }> {
-  const { photoId, previousState } = action;
-
-  // Restore photo state based on the action's previous state
-  const restoredState: any = {};
-
-  try {
-    // 1. Restore photo position/index if needed
-    if (previousState.wasInStack) {
-      // Find the photo in current state
-      const currentState = getState();
-      const photo = currentState.photos.photos.find(p => p.id === photoId);
+  // Restore any state that was changed by the original action
+  // For a swipe, this mainly means setting the current photo back
+  const state = getState();
+  const photoToRestore = state.photos.photos.byId[action.photoId];
       
-      if (photo) {
-        // Set as current photo to restore it to the swipe interface
-        dispatch(setCurrentPhoto(photo));
-        restoredState.currentPhoto = photo;
-        restoredState.photoIndex = previousState.photoIndex;
+  if (photoToRestore) {
+    dispatch(setCurrentPhoto(photoToRestore));
       }
-    }
-
-    // 2. Restore category associations if needed
-    if (previousState.categoryId) {
-      // TODO: Restore category membership when category system is fully implemented
-      restoredState.categoryId = previousState.categoryId;
-    }
-
-    // 3. Additional state restoration can be added here
-    // For example: restore progress state, update statistics, etc.
-
-    return { restoredState };
-
-  } catch (error) {
-    throw new Error(`Failed to execute undo for action ${action.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  
+  return { restoredState: { currentPhoto: photoToRestore } };
 }
 
 /**
- * Helper thunk to record a swipe action and immediately prepare for undo
- * This integrates with existing swipe handlers
+ * =================================================================
+ *  DEPRECATED: Old thunk logic - preserved for reference if needed
+ * =================================================================
  */
+
 export const recordAndDispatchSwipeAction = createAsyncThunk<
   void,
-  {
-    photoId: string;
-    direction: 'left' | 'right';
-    currentIndex: number;
-    categoryId?: string;
-    metadata?: {
-      velocity?: number;
-      confidence?: number;
-      sessionId?: string;
-    };
-  },
+  { photoId: string; direction: 'left' | 'right', categoryId: string },
   { state: RootState }
 >(
   'undo/recordAndDispatchSwipeAction',
-  async (payload, { dispatch, getState }) => {
-    const { photoId, direction, currentIndex, categoryId, metadata } = payload;
-    
-    // Record the action for undo functionality
-    dispatch({
-      type: 'undo/recordSwipeAction',
-      payload: {
-        photoId,
-        direction,
-        previousIndex: currentIndex,
-        categoryId,
-        metadata,
-      },
-    });
+  async (
+    { photoId, direction, categoryId },
+    { dispatch, getState }
+  ) => {
+    const state = getState();
+    const photoIndex = state.photos.photos.allIds.indexOf(photoId);
 
-    // Execute the actual swipe logic
-    // This would typically update photo state, move to next photo, etc.
-    const currentState = getState();
-    const currentPhoto = currentState.photos.currentPhoto;
-    
-    if (currentPhoto && currentPhoto.id === photoId) {
-      // Update photo status based on swipe direction
-      // TODO: Implement actual photo state updates when photo management is complete
-      
-      // Move to next photo (this is simplified logic)
-      const nextPhotoIndex = currentIndex + 1;
-      const nextPhoto = currentState.photos.photos[nextPhotoIndex];
-      
-      if (nextPhoto) {
-        dispatch(setCurrentPhoto(nextPhoto));
-      } else {
-        dispatch(setCurrentPhoto(null)); // No more photos
-      }
+    if (photoIndex === -1) {
+      console.error('Photo not found, cannot record action');
+      return;
     }
 
-    if (__DEV__) {
-      console.log('🔄 UndoThunk: Recorded and dispatched swipe action', {
-        photoId,
-        direction,
-        currentIndex,
-        metadata,
-      });
-    }
+    // dispatch(
+    //   recordSwipeAction({
+    //     photoId,
+    //     direction,
+    //     previousState: {
+    //       photoIndex,
+    //       // any other relevant state to restore
+    //     },
+    //     categoryId,
+    //   })
+    // );
+
+    // Here, you would also dispatch the actual swipe logic, e.g.,
+    // dispatch(swipeLeft(photoId)) or dispatch(swipeRight(photoId))
   }
 );
 

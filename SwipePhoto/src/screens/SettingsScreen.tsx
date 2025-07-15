@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Switch, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UsageStats } from '../components/ui/UsageStats';
-import { SessionManager } from '../services/SessionManager';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import HapticFeedbackService from '../services/HapticFeedbackService';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -14,8 +15,7 @@ export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [hapticFeedback, setHapticFeedback] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const sessionManager = SessionManager.getInstance();
+  const { subscriptionStatus, restorePurchases, isLoading } = useSubscription();
 
   useEffect(() => {
     const loadPreferences = async () => {
@@ -27,8 +27,6 @@ export const SettingsScreen: React.FC = () => {
       if (storedNotifications !== null) {
         setNotificationsEnabled(JSON.parse(storedNotifications));
       }
-      const premiumStatus = sessionManager.isPremium();
-      setIsPremium(premiumStatus);
     };
     loadPreferences();
   }, []);
@@ -36,7 +34,7 @@ export const SettingsScreen: React.FC = () => {
   const toggleHapticFeedback = async () => {
     const newValue = !hapticFeedback;
     setHapticFeedback(newValue);
-    await AsyncStorage.setItem('@hapticFeedback', JSON.stringify(newValue));
+    await HapticFeedbackService.setEnabled(newValue);
   };
 
   const toggleNotifications = async () => {
@@ -45,20 +43,41 @@ export const SettingsScreen: React.FC = () => {
     await AsyncStorage.setItem('@notificationsEnabled', JSON.stringify(newValue));
   };
 
-  const togglePremiumStatus = async () => {
-    const newValue = !isPremium;
-    setIsPremium(newValue);
-    await sessionManager.setPremiumStatus(newValue);
-    Alert.alert('Premium Status', `You are now ${newValue ? 'a premium user' : 'a regular user'}. Please restart the app for full effect.`);
-  };
-
-  const resetTutorial = async () => {
-    try {
-      await AsyncStorage.removeItem('@hasOnboarded');
-      Alert.alert('Tutorial Reset', 'The tutorial will be shown again on next app launch.');
-    } catch (e) {
-      console.error('Failed to reset tutorial', e);
+  const renderSubscriptionSection = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFD700" />
+        </View>
+      );
     }
+    
+    if (subscriptionStatus.isSubscribed) {
+      return (
+        <View style={styles.premiumStatusContainer}>
+          <View style={styles.premiumActiveContainer}>
+            <Ionicons name="checkmark-circle" size={24} color="#00C851" />
+            <Text style={styles.premiumActiveText}>SwipeAI Pro Active</Text>
+          </View>
+          {subscriptionStatus.activeSubscription && (
+            <Text style={styles.subscriptionTypeText}>
+              {subscriptionStatus.activeSubscription.includes('Yearly') ? 'Yearly Plan' :
+               subscriptionStatus.activeSubscription.includes('Monthly') ? 'Monthly Plan' :
+               'Premium'}
+            </Text>
+          )}
+          <TouchableOpacity style={styles.restorePurchasesButton} onPress={restorePurchases}>
+            <Text style={styles.restorePurchasesText}>Restore Purchases</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <TouchableOpacity style={styles.premiumButton} onPress={() => navigation.navigate('Upgrade', { limitReached: false })}>
+        <Text style={styles.premiumButtonText}>Go Premium!</Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -70,9 +89,7 @@ export const SettingsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
       <ScrollView style={styles.scrollView}>
-        <TouchableOpacity style={styles.premiumButton} onPress={() => navigation.navigate('Upgrade', { limitReached: false })}>
-          <Text style={styles.premiumButtonText}>Go Premium!</Text>
-        </TouchableOpacity>
+        {renderSubscriptionSection()}
         <UsageStats />
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionHeaderText}>General</Text>
@@ -99,24 +116,65 @@ export const SettingsScreen: React.FC = () => {
           <Ionicons name="information-circle-outline" size={24} color="gray" style={styles.icon} />
           <Text style={styles.settingText}>About & Help</Text>
         </TouchableOpacity>
+        
+        {/* Developer Section - COMMENTED OUT FOR PRODUCTION 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Developer</Text>
+          <Text style={styles.sectionHeaderText}>Developer Tools</Text>
         </View>
-        <View style={styles.settingItem}>
-          <Text style={styles.settingText}>Premium Status (Dev)</Text>
-          <Switch
-            value={isPremium}
-            onValueChange={togglePremiumStatus}
-            thumbColor={isPremium ? '#FFD700' : '#f4f3f4'}
-            trackColor={{ false: '#767577', true: '#FFD700' }}
-          />
-        </View>
-        <TouchableOpacity style={styles.resetButton} onPress={resetTutorial}>
-          <Text style={styles.resetButtonText}>Reset Tutorial</Text>
+        
+        <TouchableOpacity 
+          style={styles.developerButton} 
+          onPress={async () => {
+            try {
+              // Toggle premium status for testing
+              const currentStatus = await AsyncStorage.getItem('@dev_premium_override');
+              const newStatus = currentStatus === 'true' ? 'false' : 'true';
+              await AsyncStorage.setItem('@dev_premium_override', newStatus);
+              
+              Alert.alert(
+                'Developer Override', 
+                `Premium status ${newStatus === 'true' ? 'ENABLED' : 'DISABLED'} for testing.\n\nRestart the app to see changes.`,
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              Alert.alert('Error', 'Failed to toggle premium status');
+            }
+          }}
+        >
+          <Ionicons name="construct-outline" size={24} color="#FFD700" style={styles.icon} />
+          <Text style={styles.developerButtonText}>Toggle Premium Status (DEV)</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutButton} onPress={() => {/* Placeholder for logout logic */}}>
-          <Text style={styles.logoutButtonText}>Log Out</Text>
+
+        <TouchableOpacity 
+          style={styles.resetButton} 
+          onPress={async () => {
+            Alert.alert(
+              'Reset Daily Usage',
+              'This will reset your daily swipe count for testing. Continue?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Reset', 
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await AsyncStorage.removeItem('@daily_usage');
+                      await AsyncStorage.removeItem('@daily_usage_date');
+                      Alert.alert('Success', 'Daily usage reset! You can now swipe again.');
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to reset daily usage');
+                    }
+                  }
+                }
+              ]
+            );
+          }}
+        >
+          <Ionicons name="refresh-outline" size={24} color="#5bc0de" style={styles.icon} />
+          <Text style={styles.resetButtonText}>Reset Daily Swipes (DEV)</Text>
         </TouchableOpacity>
+        */}
+        
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,6 +205,11 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  loadingContainer: {
+    paddingVertical: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -161,6 +224,7 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     marginTop: 20,
+    marginHorizontal: 16,
     padding: 16,
     backgroundColor: '#5bc0de',
     borderRadius: 8,
@@ -173,6 +237,8 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     marginTop: 20,
+    marginBottom: 20,
+    marginHorizontal: 16,
     padding: 16,
     backgroundColor: '#d9534f',
     borderRadius: 8,
@@ -223,5 +289,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+  },
+  premiumStatusContainer: {
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+    borderRadius: 12,
+    margin: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  premiumActiveContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  premiumActiveText: {
+    color: '#00C851',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  subscriptionTypeText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  restorePurchasesButton: {
+    backgroundColor: '#333',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  restorePurchasesText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  developerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1a1a1a',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    marginHorizontal: 0,
+  },
+  developerButtonText: {
+    color: '#FFD700',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

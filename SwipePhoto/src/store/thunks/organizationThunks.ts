@@ -5,7 +5,7 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 import type { PhotoAsset } from '../../types/photo';
 import type { BatchOrganizationRequest, OrganizationResult } from '../../types/organization';
 import { 
@@ -14,6 +14,8 @@ import {
   incrementalOrganizationService 
 } from '../../services';
 import crossCategorizationService from '../../services/CrossCategorizationService';
+import { removePhotosFromAllCategories } from '../slices/organizationSlice';
+import { updateCategoryCount } from '../slices/categorySlice';
 
 /**
  * Organize all photos in the library
@@ -201,6 +203,66 @@ export const validateOrganizationAsync = createAsyncThunk<
         fixedIssues
       };
     }
+  }
+);
+
+/**
+ * Remove photos from all categories they belong to and sync counts
+ * This ensures consistency between organizationSlice and categorySlice
+ */
+export const removePhotosFromAllCategoriesAndSync = createAsyncThunk(
+  'organization/removePhotosFromAllCategoriesAndSync',
+  async (
+    { photoIds }: { photoIds: string[] },
+    { dispatch, getState }
+  ) => {
+    const state = getState() as RootState;
+    
+    // Keep track of categories that will be affected
+    const affectedCategories = new Set<string>();
+    
+    // Collect all categories that will be affected by this deletion
+    photoIds.forEach(photoId => {
+      const photoCategories = state.organization.indexes.photoToCategories[photoId];
+      if (photoCategories) {
+        if (photoCategories.monthCategoryId) {
+          affectedCategories.add(photoCategories.monthCategoryId);
+        }
+        if (photoCategories.sourceCategoryId) {
+          affectedCategories.add(photoCategories.sourceCategoryId);
+        }
+      }
+    });
+
+    // First, remove photos from all categories in organizationSlice
+    dispatch(removePhotosFromAllCategories({ photoIds }));
+
+    // Then, get the updated state and sync counts to categorySlice
+    const updatedState = getState() as RootState;
+    
+    // Update category counts in categorySlice for all affected categories
+    affectedCategories.forEach(categoryId => {
+      // Check both month and source categories for the updated count
+      const monthCategory = updatedState.organization.monthCategories[categoryId];
+      const sourceCategory = updatedState.organization.sourceCategories[categoryId];
+      
+      if (monthCategory) {
+        dispatch(updateCategoryCount({ 
+          categoryId, 
+          count: monthCategory.count 
+        }));
+      } else if (sourceCategory) {
+        dispatch(updateCategoryCount({ 
+          categoryId, 
+          count: sourceCategory.count 
+        }));
+      }
+    });
+
+    return {
+      removedPhotoIds: photoIds,
+      affectedCategories: Array.from(affectedCategories)
+    };
   }
 );
 

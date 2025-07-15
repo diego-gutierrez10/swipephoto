@@ -136,6 +136,31 @@ const photoSlice = createSlice({
         delete state.photos.byId[id];
       });
     },
+    addPhotos: (state, action: PayloadAction<Photo[]>) => {
+      const newPhotos = action.payload;
+      newPhotos.forEach(photo => {
+        if (!state.photos.byId[photo.id]) {
+          state.photos.byId[photo.id] = photo;
+          state.photos.allIds.push(photo.id);
+        }
+      });
+      
+      // Update metadata
+      const allPhotos = Object.values(state.photos.byId);
+      state.metadata.totalCount = allPhotos.length;
+      state.metadata.categorizedCount = allPhotos.filter(
+        (photo: Photo) => photo.categoryIds.length > 0
+      ).length;
+      state.metadata.uncategorizedCount =
+        state.metadata.totalCount - state.metadata.categorizedCount;
+      state.metadata.favoriteCount = allPhotos.filter(
+        (photo: Photo) => photo.isFavorite
+      ).length;
+      state.metadata.totalSize = allPhotos.reduce(
+        (total: number, photo: Photo) => total + photo.size,
+        0
+      );
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -198,6 +223,7 @@ export const {
   clearFilters,
   clearError,
   setPhotos,
+  addPhotos,
   removePhotosByIds,
 } = photoSlice.actions;
 

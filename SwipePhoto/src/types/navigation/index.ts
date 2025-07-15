@@ -6,10 +6,12 @@ import { PhotoAsset } from '../photo';
 
 export type RootStackParamList = {
   Onboarding: undefined;
+  PrePermissionRationale: undefined;
+  PermissionDenied: undefined;
   CategoryList: undefined;
   MainSwipe: { categoryId: string };
   SwipeTest: undefined;
-  DeletionReview: undefined;
+  DeletionReview: { categoryId: string };
   Success: undefined;
   Upgrade: { limitReached?: boolean };
   Settings: undefined;

@@ -9,25 +9,25 @@ export { useProgressTracker, useProgressTracking, useProgressTrackerEvents } fro
 export { useSessionRecovery } from './useSessionRecovery';
 export { default as usePhotoTransition } from './usePhotoTransition';
 export { useCategoryProgress } from './useCategoryProgress';
+export { useCategoryProgressData } from './useCategoryProgressData';
+export { useInAppPurchases } from './useInAppPurchases';
+export { default as usePhotoNavigation } from './usePhotoNavigation';
+export { useUndo } from './useUndo';
+export { useUndoVisualFeedback } from './useUndoVisualFeedback';
+export { useButtonAnimation } from './useButtonAnimation';
+export { useDebouncedPress } from './useDebouncedPress';
 
 // Type exports
 export type { UsePhotoLibraryResult } from './usePhotoLibrary';
-export type { OptimizedImageSource, UseOptimizedImageOptions, UseOptimizedImageResult } from './useOptimizedImage';
 export type { PhotoTransitionOptions, PhotoTransitionReturn } from './usePhotoTransition';
 export type { UseCategoryProgressReturn } from './useCategoryProgress';
+export type { CategoryProgressData } from './useCategoryProgressData';
 export type { UseCategoryMemoryConfig, UseCategoryMemoryReturn } from './useCategoryMemory';
 export type { UseSessionManagerState, UseSessionManagerReturn, UseSessionManagerConfig } from './useSessionManager';
 export type { UseProgressTrackerConfig, UseProgressTrackerReturn, UseProgressTrackerState } from './useProgressTracker';
-
-export { default as usePhotoNavigation } from './usePhotoNavigation';
 export type { PhotoNavigationOptions, PhotoNavigationReturn } from './usePhotoNavigation';
 
-// Undo functionality
-export { useUndo } from './useUndo';
-export { useUndoVisualFeedback } from './useUndoVisualFeedback';
-export { useButtonAnimation } from './useButtonAnimation'; 
-export { useDebouncedPress } from './useDebouncedPress';
-
+// Re-export all types and hooks from specific modules
 export * from './usePhotoPermissions';
 export * from './usePhotoTransition';
 export * from './useProgressTracker';

@@ -15,23 +15,31 @@ import {
 import { useAppSelector, useAppDispatch } from '../store';
 import { 
   clearDeletionQueue,
-  setLastFreedSpace 
+  setLastFreedSpace,
+  addAccumulatedFreedSpace,
 } from '../store/slices/organizationSlice';
+import { removePhotosFromAllCategoriesAndSync } from '../store/thunks/organizationThunks';
 import { removePhotosByIds } from '../store/slices/photoSlice';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Photo } from '../types';
 import { PhotoLibraryService } from '../services/PhotoLibraryService';
 import UsageStatsService from '../services/UsageStatsService';
 import { selectPhotosById } from '../store/selectors/photoSelectors';
+import { RootStackParamList } from '../types/navigation';
 
 const { width } = Dimensions.get('window');
 const NUM_COLUMNS = 3;
 const ITEM_MARGIN = 4;
 const ITEM_SIZE = (width - (NUM_COLUMNS + 1) * ITEM_MARGIN) / NUM_COLUMNS;
 
+type DeletionReviewScreenRouteProp = RouteProp<RootStackParamList, 'DeletionReview'>;
+
 export const DeletionReviewScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<DeletionReviewScreenRouteProp>();
   const dispatch = useAppDispatch();
+
+  const { categoryId } = route.params;
 
   const { deletionQueue } = useAppSelector((state) => state.organization);
   const photosById = useAppSelector(selectPhotosById);
@@ -39,8 +47,9 @@ export const DeletionReviewScreen: React.FC = () => {
   const [rescuedPhotoIds, setRescuedPhotoIds] = useState<Set<string>>(new Set());
 
   const photosForReview = useMemo(() => {
-    return deletionQueue.map(id => photosById[id]).filter(Boolean) as Photo[];
-  }, [deletionQueue, photosById]);
+    const queueForCategory = deletionQueue[categoryId] || [];
+    return queueForCategory.map(id => photosById[id]).filter(Boolean) as Photo[];
+  }, [deletionQueue, categoryId, photosById]);
 
   const toggleRescue = (photoId: string) => {
     setRescuedPhotoIds(prev => {
@@ -55,7 +64,8 @@ export const DeletionReviewScreen: React.FC = () => {
   };
 
   const handleFinalDelete = () => {
-    const finalDeletionIds = deletionQueue.filter(id => !rescuedPhotoIds.has(id));
+    const queueForCategory = deletionQueue[categoryId] || [];
+    const finalDeletionIds = queueForCategory.filter(id => !rescuedPhotoIds.has(id));
     if (finalDeletionIds.length === 0) {
       Alert.alert("No photos selected", "You have rescued all photos. Nothing to delete.");
       return;
@@ -81,8 +91,10 @@ export const DeletionReviewScreen: React.FC = () => {
             if (result.success) {
               // Now, update the app state
               dispatch(setLastFreedSpace(freedSpace));
+              dispatch(addAccumulatedFreedSpace(freedSpace));
               dispatch(removePhotosByIds(finalDeletionIds));
-              dispatch(clearDeletionQueue());
+              dispatch(removePhotosFromAllCategoriesAndSync({ photoIds: finalDeletionIds }));
+              dispatch(clearDeletionQueue({ categoryId }));
               Alert.alert(
                 'Deletion Successful',
                 `${finalDeletionIds.length} photo(s) moved to 'Recently Deleted'. You can permanently delete them there.`,

@@ -8,6 +8,7 @@ interface EmptyStateProps {
   title: string;
   description: string;
   lottieSource: LottieSource;
+  lottieColor?: string;
   buttonText?: string;
   onButtonPress?: () => void;
 }
@@ -16,6 +17,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   lottieSource,
+  lottieColor,
   buttonText,
   onButtonPress,
 }) => {
@@ -25,6 +27,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         source={lottieSource}
         width={200}
         height={200}
+        color={lottieColor}
       />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>

@@ -1,133 +1,82 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  interpolateColor,
 } from 'react-native-reanimated';
 
 export interface ProgressBarProps {
-  current: number;
-  total: number;
+  keepCount: number;
+  deleteCount: number;
   height?: number;
+  keepColor?: string;
+  deleteColor?: string;
   backgroundColor?: string;
-  fillColor?: string | [string, string];
   borderRadius?: number;
-  showText?: boolean;
-  textFormat?: 'percentage' | 'fraction' | 'both';
   style?: ViewStyle;
-  accessibilityLabel?: string;
   width?: DimensionValue;
   testID?: string;
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
-  current,
-  total,
-  height = 12,
+  keepCount = 0,
+  deleteCount = 0,
+  height = 6,
+  keepColor = '#39FF14', // Neon Green
+  deleteColor = '#FF3D71', // Neon Red
   backgroundColor = 'rgba(255, 255, 255, 0.2)',
-  fillColor = ['#39FF14', '#007AFF'],
-  borderRadius = 6,
-  showText = true,
-  textFormat = 'fraction',
+  borderRadius = 3,
   style,
-  accessibilityLabel,
   width = '100%',
   testID,
 }) => {
-  const progress = useSharedValue(0);
+  const keepProgress = useSharedValue(0);
+  const deleteProgress = useSharedValue(0);
   
-  const percentage = total > 0 ? Math.min((current / total) * 100, 100) : 0;
+  const totalProcessed = keepCount + deleteCount;
+  const keepPercentage = totalProcessed > 0 ? (keepCount / totalProcessed) * 100 : 0;
+  const deletePercentage = totalProcessed > 0 ? (deleteCount / totalProcessed) * 100 : 0;
   
   useEffect(() => {
-    progress.value = withTiming(percentage, { duration: 1000 });
-  }, [percentage]);
+    keepProgress.value = withTiming(keepPercentage, { duration: 500 });
+    deleteProgress.value = withTiming(deletePercentage, { duration: 500 });
+  }, [keepPercentage, deletePercentage]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const interpolatedColor = Array.isArray(fillColor)
-      ? interpolateColor(progress.value, [0, 100], fillColor)
-      : fillColor;
-
+  const animatedKeepStyle = useAnimatedStyle(() => {
     return {
-      width: `${progress.value}%`,
-      backgroundColor: interpolatedColor,
-      shadowColor: interpolatedColor,
-      shadowRadius: progress.value > 0 ? 10 : 0,
-      shadowOpacity: progress.value > 0 ? 0.7 : 0,
-      shadowOffset: { width: 0, height: 0 },
-      elevation: progress.value > 0 ? 10 : 0,
+      width: `${keepProgress.value}%`,
     };
   });
 
-  const getDisplayText = (): string => {
-    switch (textFormat) {
-      case 'percentage':
-        return `${Math.round(percentage)}%`;
-      case 'fraction': {
-        const format = (val: number) => (val / (1024 * 1024)).toFixed(1);
-        return `${format(current)} / ${format(total)} MB`;
-      }
-      case 'both': {
-        const format = (val: number) => (val / (1024 * 1024)).toFixed(1);
-        return `${format(current)} / ${format(total)} MB (${Math.round(percentage)}%)`;
-      }
-      default:
-        return `${Math.round(percentage)}%`;
-    }
-  };
+  const animatedDeleteStyle = useAnimatedStyle(() => {
+    return {
+      width: `${deleteProgress.value}%`,
+    };
+  });
 
   return (
-    <View style={[styles.container, style]}>
       <View
         style={[
           styles.progressContainer,
           { height, backgroundColor, borderRadius, width },
+        style
         ]}
-        accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: total, now: current }}
-        accessibilityLabel={accessibilityLabel || `Progress: ${current} of ${total}`}
         testID={testID}
       >
-        <Animated.View style={[styles.progressFill, { borderRadius }, animatedStyle]} />
-      </View>
-
-      {showText && (
-        <View style={styles.textContainer}>
-          <Text style={styles.progressText}>{getDisplayText()}</Text>
-        </View>
-      )}
+      <Animated.View style={[styles.progressFill, { backgroundColor: keepColor }, animatedKeepStyle]} />
+      <Animated.View style={[styles.progressFill, { backgroundColor: deleteColor }, animatedDeleteStyle]} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-  },
   progressContainer: {
-    overflow: 'visible', // Changed to visible for glow effect
-    position: 'relative',
+    flexDirection: 'row',
+    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-  },
-  textContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressText: {
-    fontSize: 10,
-    color: 'white',
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 });
 

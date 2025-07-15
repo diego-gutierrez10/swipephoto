@@ -1,12 +1,11 @@
 import React, { useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, SafeAreaView, ActivityIndicator, DevSettings } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppSelector, useAppDispatch } from '../store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Category } from '../types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
-import { loadAndCategorizePhotos } from '../store/slices/categorySlice';
+import { loadAndCategorizePhotos, loadCategoryCounts } from '../store/slices/categorySlice';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryListItem } from '../components/ui/CategoryListItem';
 
@@ -27,13 +26,14 @@ interface CategorySection {
 export const CategoryListScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const dispatch = useAppDispatch();
-  const { categories, loading, error } = useAppSelector((state) => state.categories);
+  const { categories, loading, countingLoading, error, categoryCounts } = useAppSelector((state) => state.categories);
 
   useEffect(() => {
-    if (categories.length === 0 && !loading) {
-      dispatch(loadAndCategorizePhotos());
+    if (categories.length === 0 && !countingLoading && !loading) {
+      // Use fast counting instead of loading all photos
+      dispatch(loadCategoryCounts());
     }
-  }, [dispatch, categories.length, loading]);
+  }, [dispatch, categories.length, countingLoading, loading]);
 
   const sections = useMemo(() => {
     const pending: Category[] = [];
@@ -65,21 +65,23 @@ export const CategoryListScreen: React.FC = () => {
     <Text style={styles.sectionHeader}>{section.title}</Text>
   );
 
-  const handleResetOnboarding = async () => {
-    try {
-      await AsyncStorage.removeItem('@hasOnboarded');
-      DevSettings.reload();
-    } catch (e) {
-      console.error('Failed to reset onboarding status', e);
-    }
-  };
+  if (countingLoading || loading) {
+    const loadingMessage = countingLoading 
+      ? categoryCounts?.totalPhotos 
+        ? `Organizing ${categoryCounts.totalPhotos.toLocaleString()} photos...`
+        : 'Analyzing your photo library...'
+      : 'Loading Photos...';
 
-  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loadingText}>Loading Photos...</Text>
+          <Text style={styles.loadingText}>{loadingMessage}</Text>
+          {countingLoading && (
+            <Text style={styles.subLoadingText}>
+              This will be much faster on subsequent launches
+            </Text>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -90,7 +92,7 @@ export const CategoryListScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
           <Text style={styles.errorText}>Error: {error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(loadAndCategorizePhotos())}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(loadCategoryCounts())}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -113,11 +115,6 @@ export const CategoryListScreen: React.FC = () => {
         renderSectionHeader={renderSectionHeader}
         ListEmptyComponent={<Text style={styles.emptyText}>No categories found.</Text>}
       />
-      {__DEV__ && (
-        <TouchableOpacity style={styles.devButton} onPress={handleResetOnboarding}>
-          <Text style={styles.devButtonText}>Reset Onboarding</Text>
-        </TouchableOpacity>
-      )}
     </SafeAreaView>
   );
 };
@@ -158,6 +155,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  subLoadingText: {
+    marginTop: 8,
+    color: '#999',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
   errorText: {
     color: 'red',
     fontSize: 16,
@@ -174,18 +178,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  devButton: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: '#555',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 15,
-  },
-  devButtonText: {
-    color: '#fff',
-    fontSize: 12,
   },
 }); 

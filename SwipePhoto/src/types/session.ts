@@ -74,6 +74,9 @@ export interface SessionProgressState {
   // Navigation history
   navigationHistory: NavigationHistoryEntry[];
   maxHistoryEntries: number;
+  
+  // Deletion queue persistence
+  deletionQueue: Record<string, string[]>; // categoryId -> photoId[]
 }
 
 /**
@@ -330,6 +333,7 @@ export const createDefaultSessionState = (sessionId: string): SessionState => ({
     categoryMemory: {},
     navigationHistory: [],
     maxHistoryEntries: 50,
+    deletionQueue: {},
   },
   
   userPreferences: {

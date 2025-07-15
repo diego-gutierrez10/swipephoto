@@ -17,7 +17,10 @@
     "production": {
       "autoIncrement": true,
       "node": "20.11.0",
-      "pnpm": "8.15.3"
+      "pnpm": "8.15.3",
+      "ios": {
+        "image": "latest"
+      }
     }
   },
   "submit": {

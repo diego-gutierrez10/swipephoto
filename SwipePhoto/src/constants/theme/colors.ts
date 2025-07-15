@@ -47,6 +47,17 @@ export const colors = {
     pink: '#FF0080',
     cyan: '#00FFFF',
   },
+  feedback: {
+    success: '#28a745',
+    error: '#dc3545',
+    warning: '#ffc107',
+    info: '#17a2b8',
+  },
+  neon: {
+    blue: '#00BFFF',
+    green: '#39FF14',
+    red: '#FF3131',
+  },
 } as const;
 
 // Light theme colors (for future toggle functionality)

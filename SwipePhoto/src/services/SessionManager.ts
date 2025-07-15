@@ -21,6 +21,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PREMIUM_KEY = '@SwipePhoto:isPremium';
 
+// Type for Redux store interaction (will be provided by the app)
+interface ReduxStoreInterface {
+  getState: () => any;
+  dispatch: (action: any) => void;
+}
+
+// Action types for deletion queue management (to avoid circular dependencies)
+const DELETION_QUEUE_ACTIONS = {
+  ADD_TO_DELETION_QUEUE: 'organization/addToDeletionQueue',
+  REMOVE_FROM_DELETION_QUEUE: 'organization/removeFromDeletionQueue', 
+  CLEAR_DELETION_QUEUE: 'organization/clearDeletionQueue',
+};
+
 /**
  * Session validation result
  */
@@ -109,6 +122,9 @@ export class SessionManager {
   // Progressive loading
   private loadingQueue: ProgressiveResource[] = [];
   private loadingInProgress = false;
+
+  // Redux store integration
+  private reduxStore: ReduxStoreInterface | null = null;
 
   private constructor(config: Partial<SessionManagerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -232,8 +248,9 @@ export class SessionManager {
       // Also update the in-memory state to be consistent
       this.currentSession = session;
 
-      // Save back to storage immediately to guarantee persistence
-      await this.saveSession();
+      // REMOVED: Immediate save to prevent excessive writes.
+      // The auto-save mechanism or manual saves will handle persistence.
+      // await this.saveSession();
       this.log(`Photo count incremented. New count: ${newCount}`);
 
     } catch (error) {
@@ -247,7 +264,7 @@ export class SessionManager {
   public getDailyUsage(): { count: number; limit: number } {
     const count = this.currentSession?.dailyPhotoCount ?? 0;
     const isPremium = this.isPremium();
-    const limit = isPremium ? Infinity : 50; // 50 swipes for free users
+    const limit = isPremium ? Infinity : 250; // TEMPORARILY INCREASED FOR TESTING: was 50 swipes for free users
     
     this.log(`Getting daily usage. In-memory count: ${count}, Limit: ${limit}, Premium: ${isPremium}`);
     return { count, limit };
@@ -277,48 +294,37 @@ export class SessionManager {
   }
 
   /**
-   * Pause the session (app going to background)
+   * Pause the session
    */
   public async pause(): Promise<void> {
-    if (!this.currentSession || this.currentSession.lifecycle.isPaused) {
-      return;
-    }
+    if (!this.currentSession || this.currentSession.lifecycle.isPaused) return;
 
-    const pauseTime = Date.now();
-    this.pauseStartTime = pauseTime;
+    this.log('⏸️ SessionManager: Pausing session...');
+    const now = Date.now();
+    
+    // Update lifecycle state
+    const lifecycle: SessionLifecycleState = {
+      ...this.currentSession.lifecycle,
+      isActive: false,
+      isPaused: true,
+      pausedAt: now,
+      lastActiveTime: now,
+    };
+    
+    this.currentSession = {
+      ...this.currentSession,
+      lifecycle,
+    };
 
+    this.pauseStartTime = now;
+    
+    // Explicitly save the session when going into the background
     try {
-      this.log('⏸️ SessionManager: Pausing session...');
-
-      // Update lifecycle state
-      const lifecycleUpdate: Partial<SessionLifecycleState> = {
-        isActive: false,
-        isPaused: true,
-        pausedAt: pauseTime,
-        pauseCount: this.currentSession.lifecycle.pauseCount + 1,
-        lastActiveTime: pauseTime,
-      };
-
-      await this.updateSession({
-        lifecycle: {
-          ...this.currentSession.lifecycle,
-          ...lifecycleUpdate,
-        },
-      });
-
-      // Force save the session
+      await this.saveDeletionQueue();
       await this.saveSession();
-
-      // Flush category memory manager
-      await this.categoryMemoryManager.flushPendingWrites();
-
-      this.emitEvent('session_saved', { reason: 'pause', sessionId: this.currentSession.sessionId });
-
-      this.log('✅ SessionManager: Session paused and saved');
-
+      this.log('✅ SessionManager: Session saved on pause.');
     } catch (error) {
-      console.error('SessionManager: Failed to pause session:', error);
-      this.emitEvent('storage_error', { operation: 'pause', error });
+      console.error('SessionManager: Failed to save session on pause:', error);
     }
   }
 
@@ -831,5 +837,86 @@ export class SessionManager {
     this.log('🚀 Starting new session from recovery...');
     await this.sessionStorage.clear();
     await this.createNewSession();
+  }
+
+  /**
+   * Set Redux store reference for deletion queue synchronization
+   */
+  public setReduxStore(store: ReduxStoreInterface): void {
+    this.reduxStore = store;
+    this.log('🔗 SessionManager: Redux store connected');
+  }
+
+  /**
+   * Save deletion queue from Redux store to session state
+   */
+  public async saveDeletionQueue(): Promise<void> {
+    if (!this.reduxStore || !this.currentSession) return;
+
+    try {
+      const state = this.reduxStore.getState();
+      const deletionQueue = state.organization?.deletionQueue || {};
+      
+      this.currentSession.progress.deletionQueue = { ...deletionQueue };
+      
+      this.log('💾 SessionManager: Deletion queue saved to session', {
+        queue: deletionQueue,
+      });
+      
+      // Auto-save the session
+      await this.saveSession();
+    } catch (error) {
+      console.error('SessionManager: Failed to save deletion queue:', error);
+    }
+  }
+
+  /**
+   * Restore deletion queue from session state to Redux store
+   */
+  public restoreDeletionQueue(): void {
+    if (!this.reduxStore || !this.currentSession) return;
+
+    try {
+      const savedQueue = this.currentSession.progress.deletionQueue || {};
+      
+      if (Object.keys(savedQueue).length > 0) {
+        // Restore each photo in the queue for each category
+        Object.entries(savedQueue).forEach(([categoryId, photoIds]) => {
+          if (Array.isArray(photoIds)) {
+            photoIds.forEach(photoId => {
+              this.reduxStore!.dispatch({
+                type: DELETION_QUEUE_ACTIONS.ADD_TO_DELETION_QUEUE,
+                payload: { photoId, categoryId }
+              });
+            });
+          }
+        });
+        
+        this.log('🔄 SessionManager: Deletion queue restored from session', {
+          queue: savedQueue
+        });
+      } else {
+        this.log('ℹ️  SessionManager: No deletion queue to restore');
+      }
+    } catch (error) {
+      console.error('SessionManager: Failed to restore deletion queue:', error);
+    }
+  }
+
+  /**
+   * Get current deletion queue length for telemetry
+   */
+  public getDeletionQueueInfo(): { length: number; photosByCat: Record<string, string[]> } {
+    if (!this.currentSession) {
+      return { length: 0, photosByCat: {} };
+    }
+    
+    const queue = this.currentSession.progress.deletionQueue || {};
+    const totalLength = Object.values(queue).reduce((acc, photos) => acc + (Array.isArray(photos) ? photos.length : 0), 0);
+    
+    return {
+      length: totalLength,
+      photosByCat: { ...queue }
+    };
   }
 } 

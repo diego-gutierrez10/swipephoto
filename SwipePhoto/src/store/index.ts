@@ -1,5 +1,7 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import { persistStore, persistReducer } from 'redux-persist';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import slices
 import photoSlice from './slices/photoSlice';
@@ -12,19 +14,28 @@ import undoReducer from './slices/undoSlice';
 import { createEnhancedBatchMiddleware } from './middleware/simpleBatchMiddleware';
 import { progressMiddleware } from './middleware/progressMiddleware';
 
+const organizationPersistConfig = {
+  key: 'organization',
+  storage: AsyncStorage,
+  whitelist: ['accumulatedFreedSpace'], // Only persist the accumulated space
+};
+
+const rootReducer = combineReducers({
+  photos: photoSlice,
+  categories: categorySlice,
+  organization: persistReducer(organizationPersistConfig, organizationReducer),
+  progress: progressReducer,
+  undo: undoReducer,
+});
+
 export const store = configureStore({
-  reducer: {
-    photos: photoSlice,
-    categories: categorySlice,
-    organization: organizationReducer,
-    progress: progressReducer,
-    undo: undoReducer,
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
         // Ignore these action types
         ignoredActions: [
+          'persist/PERSIST',
           'photos/loadPhotos/fulfilled',
           'photos/categorizePhoto/fulfilled',
           'categories/loadCategories/fulfilled',
@@ -48,6 +59,8 @@ export const store = configureStore({
     ),
   devTools: __DEV__,
 });
+
+export const persistor = persistStore(store);
 
 // Export types
 export type RootState = ReturnType<typeof store.getState>;

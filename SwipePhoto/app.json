@@ -1,14 +1,13 @@
 {
   "expo": {
-    "name": "SwipePhoto",
+    "name": "SwipeAI",
     "slug": "swipephoto",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./src/assets/splash-icon.png",
+      "image": "./src/assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,23 +17,26 @@
         {
           "photosPermission": "The app accesses your photos to let you organize them by swiping into categories."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.diegogutierrez.swipephoto",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "SwipePhoto helps you organize your photos locally on your device by swiping them into custom categories. Your photos stay completely private and are never uploaded or shared.",
-        "NSCameraUsageDescription": "SwipePhoto lets you take new photos to organize alongside your existing ones. All processing happens locally on your device.",
+        "NSPhotoLibraryUsageDescription": "SwipeAI helps you organize your photos locally on your device by swiping them into custom categories. Your photos stay completely private and are never uploaded or shared.",
+        "NSCameraUsageDescription": "SwipeAI lets you take new photos to organize alongside your existing ones. All processing happens locally on your device.",
         "PHPhotoLibraryPreventAutomaticLimitedAccessAlert": true,
-        "NSPhotoLibraryAddUsageDescription": "SwipePhoto can save organized photos back to your library if you choose. This is entirely optional and local to your device.",
+        "NSPhotoLibraryAddUsageDescription": "SwipeAI can save organized photos back to your library if you choose. This is entirely optional and local to your device.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.diegogutierrez.swipephoto",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -42,11 +44,10 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ],
-      "edgeToEdgeEnabled": true
+      ]
     },
     "web": {
-      "favicon": "./src/assets/favicon.png"
+      "favicon": "./src/assets/icon.png"
     },
     "extra": {
       "eas": {

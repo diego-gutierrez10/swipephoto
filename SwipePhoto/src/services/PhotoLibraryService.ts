@@ -130,6 +130,7 @@ export class PhotoLibraryService implements IPhotoLibraryService {
           try {
             // Get asset info which includes the local URI that can be displayed
             const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
+            const fileInfo = await FileSystem.getInfoAsync(assetInfo.localUri || assetInfo.uri);
             
             // Get album name
             let albumName: string | undefined = undefined;
@@ -148,6 +149,7 @@ export class PhotoLibraryService implements IPhotoLibraryService {
               duration: asset.duration,
               type: asset.mediaType,
               albumName: albumName,
+              fileSize: 'size' in fileInfo ? fileInfo.size : 0, // Get the correct file size here
             };
           } catch (error) {
             console.warn(`Failed to get asset info for ${asset.id}:`, error);
@@ -162,6 +164,7 @@ export class PhotoLibraryService implements IPhotoLibraryService {
         duration: asset.duration,
         type: asset.mediaType,
               albumName: asset.albumId, // Fallback, though not ideal
+              fileSize: 0, // Fallback size
             };
           }
         })

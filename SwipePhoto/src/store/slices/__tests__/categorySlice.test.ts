@@ -13,7 +13,11 @@ describe('categorySlice reducer', () => {
   beforeEach(() => {
     initialState = {
       categories: [],
+      categoryCounts: null,
+      loadedCategories: [],
+      categoryPagination: {},
       loading: false,
+      countingLoading: false,
       error: null,
     };
   });
@@ -70,6 +74,7 @@ describe('categorySlice reducer', () => {
       categories: [
         { id: 'cat1', name: 'Test', photoIds: [], count: 0, thumbnail: null, isCleaned: false, sourceType: 'source' },
       ],
+      categoryPagination: {},
     };
     
     const action = setCategoryCleanedStatus({ categoryId: 'cat1', isCleaned: true });

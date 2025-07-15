@@ -8,7 +8,6 @@ import {
   OrganizationProgress,
   OrganizationFilters,
   CategoryIndexes,
-  PhotoSourceType,
   BatchOrganizationRequest,
   OrganizationResult
 } from '../../types/organization';
@@ -22,15 +21,10 @@ const initialState: OrganizationState = {
     photoToCategories: {},
     monthsByYear: {},
     sourcesByType: {
-      [PhotoSourceType.CAMERA_ROLL]: [],
-      [PhotoSourceType.WHATSAPP]: [],
-      [PhotoSourceType.SCREENSHOTS]: [],
-      [PhotoSourceType.INSTAGRAM]: [],
-      [PhotoSourceType.TELEGRAM]: [],
-      [PhotoSourceType.SAFARI]: [],
-      [PhotoSourceType.OTHER_APPS]: [],
-      [PhotoSourceType.UNKNOWN]: []
-    }
+      cameraRoll: [],
+      screenshots: [],
+      otherApps: [],
+    },
   },
   metadata: {
     totalPhotos: 0,
@@ -52,7 +46,7 @@ const initialState: OrganizationState = {
   selectedCategoryType: null,
   error: null,
   lastError: null,
-  deletionQueue: [],
+  deletionQueue: {},
   lastFreedSpace: 0,
   accumulatedFreedSpace: 0,
 };
@@ -175,7 +169,7 @@ const organizationSlice = createSlice({
       };
       
       // Update category photo counts
-      if (state.monthCategories[reference.monthCategoryId]) {
+      if (reference.monthCategoryId && state.monthCategories[reference.monthCategoryId]) {
         if (!state.monthCategories[reference.monthCategoryId].photoIds.includes(reference.photoId)) {
           state.monthCategories[reference.monthCategoryId].photoIds.push(reference.photoId);
           state.monthCategories[reference.monthCategoryId].count++;
@@ -183,7 +177,7 @@ const organizationSlice = createSlice({
         }
       }
       
-      if (state.sourceCategories[reference.sourceCategoryId]) {
+      if (reference.sourceCategoryId && state.sourceCategories[reference.sourceCategoryId]) {
         if (!state.sourceCategories[reference.sourceCategoryId].photoIds.includes(reference.photoId)) {
           state.sourceCategories[reference.sourceCategoryId].photoIds.push(reference.photoId);
           state.sourceCategories[reference.sourceCategoryId].count++;
@@ -249,26 +243,162 @@ const organizationSlice = createSlice({
     },
 
     // Deletion queue management
-    addToDeletionQueue: (state, action: PayloadAction<string>) => {
-      const photoId = action.payload;
-      if (!state.deletionQueue.includes(photoId)) {
-        state.deletionQueue.push(photoId);
+    addToDeletionQueue: (state, action: PayloadAction<{ photoId: string; categoryId: string }>) => {
+      const { photoId, categoryId } = action.payload;
+      if (!state.deletionQueue[categoryId]) {
+        state.deletionQueue[categoryId] = [];
+      }
+      if (!state.deletionQueue[categoryId].includes(photoId)) {
+        state.deletionQueue[categoryId].push(photoId);
       }
     },
 
-    removeFromDeletionQueue: (state, action: PayloadAction<string>) => {
-      const photoIdToRemove = action.payload;
-      state.deletionQueue = state.deletionQueue.filter(
-        (id) => id !== photoIdToRemove
-      );
+    removeFromDeletionQueue: (state, action: PayloadAction<{ photoId: string; categoryId: string }>) => {
+      const { photoId, categoryId } = action.payload;
+      if (state.deletionQueue[categoryId]) {
+        state.deletionQueue[categoryId] = state.deletionQueue[categoryId].filter(
+          (id) => id !== photoId
+        );
+      }
     },
 
-    clearDeletionQueue: (state) => {
-      state.deletionQueue = [];
+    // NEW: Add photo to deletion queue for all categories it belongs to
+    addToDeletionQueueForAllCategories: (state, action: PayloadAction<{ photoId: string }>) => {
+      const { photoId } = action.payload;
+      
+      // Get all categories this photo belongs to
+      const photoCategories = state.indexes.photoToCategories[photoId];
+      
+      if (photoCategories) {
+        const { monthCategoryId, sourceCategoryId } = photoCategories;
+        
+        // Add to month category's deletion queue if exists
+        if (monthCategoryId && state.monthCategories[monthCategoryId]) {
+          if (!state.deletionQueue[monthCategoryId]) {
+            state.deletionQueue[monthCategoryId] = [];
+          }
+          if (!state.deletionQueue[monthCategoryId].includes(photoId)) {
+            state.deletionQueue[monthCategoryId].push(photoId);
+          }
+        }
+        
+        // Add to source category's deletion queue if exists
+        if (sourceCategoryId && state.sourceCategories[sourceCategoryId]) {
+          if (!state.deletionQueue[sourceCategoryId]) {
+            state.deletionQueue[sourceCategoryId] = [];
+          }
+          if (!state.deletionQueue[sourceCategoryId].includes(photoId)) {
+            state.deletionQueue[sourceCategoryId].push(photoId);
+          }
+        }
+      }
+    },
+
+    // NEW: Remove photo from deletion queue for all categories it belongs to
+    removeFromDeletionQueueForAllCategories: (state, action: PayloadAction<{ photoId: string }>) => {
+      const { photoId } = action.payload;
+      
+      // Get all categories this photo belongs to
+      const photoCategories = state.indexes.photoToCategories[photoId];
+      
+      if (photoCategories) {
+        const { monthCategoryId, sourceCategoryId } = photoCategories;
+        
+        // Remove from month category's deletion queue if exists
+        if (monthCategoryId && state.deletionQueue[monthCategoryId]) {
+          state.deletionQueue[monthCategoryId] = state.deletionQueue[monthCategoryId].filter(
+            (id) => id !== photoId
+          );
+          // Remove empty deletion queue
+          if (state.deletionQueue[monthCategoryId].length === 0) {
+            delete state.deletionQueue[monthCategoryId];
+          }
+        }
+        
+        // Remove from source category's deletion queue if exists
+        if (sourceCategoryId && state.deletionQueue[sourceCategoryId]) {
+          state.deletionQueue[sourceCategoryId] = state.deletionQueue[sourceCategoryId].filter(
+            (id) => id !== photoId
+          );
+          // Remove empty deletion queue
+          if (state.deletionQueue[sourceCategoryId].length === 0) {
+            delete state.deletionQueue[sourceCategoryId];
+          }
+        }
+      }
+    },
+
+    clearDeletionQueue: (state, action: PayloadAction<{ categoryId: string }>) => {
+      const { categoryId } = action.payload;
+      if (state.deletionQueue[categoryId]) {
+        delete state.deletionQueue[categoryId];
+      }
+    },
+
+    // NEW: Remove photos from all categories they belong to and sync deletion queues
+    removePhotosFromAllCategories: (state, action: PayloadAction<{ photoIds: string[] }>) => {
+      const { photoIds } = action.payload;
+      
+      photoIds.forEach(photoId => {
+        // Get all categories this photo belongs to
+        const photoCategories = state.indexes.photoToCategories[photoId];
+        
+        if (photoCategories) {
+          const { monthCategoryId, sourceCategoryId } = photoCategories;
+          
+          // Remove from month category if exists
+          if (monthCategoryId && state.monthCategories[monthCategoryId]) {
+            const monthCategory = state.monthCategories[monthCategoryId];
+            monthCategory.photoIds = monthCategory.photoIds.filter(id => id !== photoId);
+            monthCategory.count = monthCategory.photoIds.length;
+            monthCategory.lastUpdated = Date.now();
+            
+            // Remove from month category's deletion queue if present
+            if (state.deletionQueue[monthCategoryId]) {
+              state.deletionQueue[monthCategoryId] = state.deletionQueue[monthCategoryId].filter(
+                id => id !== photoId
+              );
+              // Remove empty deletion queue
+              if (state.deletionQueue[monthCategoryId].length === 0) {
+                delete state.deletionQueue[monthCategoryId];
+              }
+            }
+          }
+          
+          // Remove from source category if exists
+          if (sourceCategoryId && state.sourceCategories[sourceCategoryId]) {
+            const sourceCategory = state.sourceCategories[sourceCategoryId];
+            sourceCategory.photoIds = sourceCategory.photoIds.filter(id => id !== photoId);
+            sourceCategory.count = sourceCategory.photoIds.length;
+            sourceCategory.lastUpdated = Date.now();
+            
+            // Remove from source category's deletion queue if present
+            if (state.deletionQueue[sourceCategoryId]) {
+              state.deletionQueue[sourceCategoryId] = state.deletionQueue[sourceCategoryId].filter(
+                id => id !== photoId
+              );
+              // Remove empty deletion queue
+              if (state.deletionQueue[sourceCategoryId].length === 0) {
+                delete state.deletionQueue[sourceCategoryId];
+              }
+            }
+          }
+          
+          // Remove photo reference and index entry
+          delete state.photoReferences[photoId];
+          delete state.indexes.photoToCategories[photoId];
+        }
+      });
+      
+      // Update total photos count
+      state.metadata.totalPhotos = Object.keys(state.photoReferences).length;
     },
 
     setLastFreedSpace: (state, action: PayloadAction<number>) => {
       state.lastFreedSpace = action.payload;
+    },
+
+    addAccumulatedFreedSpace: (state, action: PayloadAction<number>) => {
       state.accumulatedFreedSpace += action.payload;
     },
 
@@ -285,14 +415,9 @@ const organizationSlice = createSlice({
        state.indexes.photoToCategories = {};
        state.indexes.monthsByYear = {};
        state.indexes.sourcesByType = {
-         [PhotoSourceType.CAMERA_ROLL]: [],
-         [PhotoSourceType.WHATSAPP]: [],
-         [PhotoSourceType.SCREENSHOTS]: [],
-         [PhotoSourceType.INSTAGRAM]: [],
-         [PhotoSourceType.TELEGRAM]: [],
-         [PhotoSourceType.SAFARI]: [],
-         [PhotoSourceType.OTHER_APPS]: [],
-         [PhotoSourceType.UNKNOWN]: []
+         cameraRoll: [],
+         screenshots: [],
+         otherApps: [],
        };
       
       // Rebuild photo-to-categories index
@@ -387,8 +512,12 @@ export const {
   addPhotoToOrganization,
   addToDeletionQueue,
   removeFromDeletionQueue,
+  addToDeletionQueueForAllCategories,
+  removeFromDeletionQueueForAllCategories,
   clearDeletionQueue,
+  removePhotosFromAllCategories,
   setLastFreedSpace,
+  addAccumulatedFreedSpace,
   clearLastFreedSpace,
   resetOrganizationState
 } = organizationSlice.actions;

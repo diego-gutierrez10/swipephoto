@@ -105,6 +105,12 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   const [currentProgress, setCurrentProgress] = useState(0);
   const [currentDirection, setCurrentDirection] = useState<SwipeDirection | null>(null);
   
+  const animatedChildren = React.isValidElement(children)
+    ? React.cloneElement(children as React.ReactElement<any>, {
+        translateX: activeTranslateX,
+      })
+    : children;
+
   // Helper function to trigger haptic feedback based on swipe direction
   const triggerHapticFeedback = (direction: SwipeDirection) => {
     'worklet';
@@ -174,16 +180,17 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
         activeTranslateX.value = withTiming(targetX, { duration: 300 }, (finished) => {
           'worklet';
           if (finished) {
-            // Reset position for next card
+            // IMPORTANT: First, run the JS thread logic to update the state (e.g., change the photo index)
+            if (onSwipeComplete) {
+              runOnJS(onSwipeComplete)(direction);
+            }
+
+            // After the state update is initiated, reset the UI thread values for the new card
             activeTranslateX.value = 0;
             translateY.value = 0;
             rotate.value = 0;
             scale.value = 1;
             isAnimating.value = false;
-            
-            if (onSwipeComplete) {
-              runOnJS(onSwipeComplete)(direction);
-            }
           }
         });
         
@@ -222,7 +229,7 @@ export const SwipeGestureHandler: React.FC<SwipeGestureHandlerProps> = ({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[style, animatedStyle]}>
-        {children}
+        {animatedChildren}
         {showIndicators && (
           <SwipeDirectionIndicators
             progress={currentProgress}

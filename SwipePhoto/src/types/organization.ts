@@ -27,24 +27,25 @@ export interface MonthCategory extends PhotoCategory {
  */
 export interface SourceCategory extends PhotoCategory {
   type: 'source';
-  sourceType: PhotoSourceType;
+  sourceType: string;
   icon?: string;
   description?: string;
 }
 
 /**
- * Photo source types
+ * Photo source types - this is now defined and simplified in PhotoCountingService.ts
+ * The robust logic there will handle categorization into 'cameraRoll', 'screenshots', and 'otherApps'.
  */
-export enum PhotoSourceType {
-  CAMERA_ROLL = 'camera_roll',
-  WHATSAPP = 'whatsapp',
-  SCREENSHOTS = 'screenshots',
-  INSTAGRAM = 'instagram',
-  TELEGRAM = 'telegram',
-  SAFARI = 'safari',
-  OTHER_APPS = 'other_apps',
-  UNKNOWN = 'unknown'
-}
+// export enum PhotoSourceType {
+//   CAMERA_ROLL = 'camera_roll',
+//   WHATSAPP = 'whatsapp',
+//   SCREENSHOTS = 'screenshots',
+//   INSTAGRAM = 'instagram',
+//   TELEGRAM = 'telegram',
+//   SAFARI = 'safari',
+//   OTHER_APPS = 'other_apps',
+//   UNKNOWN = 'unknown'
+// }
 
 /**
  * Photo reference with category information
@@ -89,7 +90,7 @@ export interface CategoryIndexes {
     sourceCategoryId: string | null;
   }>;
   monthsByYear: Record<number, string[]>; // year -> month category IDs
-  sourcesByType: Record<PhotoSourceType, string[]>; // source type -> source category IDs
+  sourcesByType: Record<string, string[]>; // source type -> source category IDs
 }
 
 /**
@@ -100,7 +101,7 @@ export interface OrganizationFilters {
     start: number;
     end: number;
   };
-  sources?: PhotoSourceType[];
+  sources?: string[]; // Changed from PhotoSourceType[]
   minPhotos?: number;
   sortBy: 'date' | 'count' | 'name';
   sortOrder: 'asc' | 'desc';
@@ -127,7 +128,7 @@ export interface OrganizationState {
   filters: OrganizationFilters;
   selectedCategoryId: string | null;
   selectedCategoryType: 'month' | 'source' | null;
-  deletionQueue: string[]; // Array of photo IDs marked for deletion
+  deletionQueue: Record<string, string[]>; // categoryId -> photoId[]
   
   // Error handling
   error: string | null;
@@ -178,8 +179,8 @@ export interface CategoryCreationOptions {
 export interface IOrganizationService {
   organizePhotos(request: BatchOrganizationRequest): Promise<OrganizationResult>;
   createMonthCategory(year: number, month: number): MonthCategory;
-  createSourceCategory(sourceType: PhotoSourceType): SourceCategory;
-  detectPhotoSource(photo: PhotoAsset): PhotoSourceType;
+  createSourceCategory(sourceType: string): SourceCategory; // Changed from PhotoSourceType
+  detectPhotoSource(photo: PhotoAsset): string; // Changed from PhotoSourceType
   getPhotosByCategory(categoryId: string, categoryType: 'month' | 'source'): PhotoAsset[];
   updateCategoryCounts(): void;
   rebuildIndexes(): void;
